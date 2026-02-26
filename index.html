@@ -31,7 +31,7 @@
   body { font-family: 'Lato', sans-serif; background: var(--bark); color: var(--cream); }
 
   /* ── APP SHELL ────────────────────────────────────────── */
-  #app { display: flex; flex-direction: column; height: 100vh; }
+  #app { display: flex; flex-direction: column; height: 100dvh; }
 
   /* ── HEADER ───────────────────────────────────────────── */
   header {
@@ -422,8 +422,11 @@
   @media (max-width: 640px) {
     .plan-drawer {
       top: auto; left: 0; right: 0; bottom: 0;
-      width: 100%; height: 80%;
+      width: 100%;
+      max-width: 100vw;
+      height: 80%;
       animation: slideUp 0.3s cubic-bezier(0.4,0,0.2,1);
+      overflow-x: hidden;
     }
   }
 
@@ -633,14 +636,19 @@
     .detail-panel {
       position: absolute;
       bottom: 0; left: 0; right: 0;
-      width: 100%; height: 65%;
+      width: 100%;
+      max-width: 100vw;
+      height: 65%;
       display: none;
       box-shadow: 0 -4px 24px var(--shadow);
+      overflow-x: hidden;
     }
     .detail-panel.open { display: flex; animation: slideUp 0.28s cubic-bezier(0.4,0,0.2,1); }
     @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     .map-legend { display: none; }
     .corridor-panel { bottom: 0.75rem; right: 0.5rem; left: 0.5rem; width: auto; }
+    .drawer-header { padding: 0.9rem 1rem 0.75rem; }
+    .drawer-body { padding: 1rem; }
   }
 </style>
 </head>
