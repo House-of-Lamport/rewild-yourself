@@ -1333,7 +1333,7 @@ function closePlanDrawer() {
 }
 
 function renderForm(prefill = planFormState) {
-  document.getElementById('drawerTitle').textContent = 'You're-wild';
+  document.getElementById('drawerTitle').textContent = "You're-wild";
   const selectedGoals = new Set(prefill.goals);
 
   document.getElementById('drawerBody').innerHTML = `
@@ -1581,7 +1581,7 @@ function renderPlan(plan, formState, isMock = false) {
 }
 
 function renderPlanError() {
-  document.getElementById('drawerTitle').textContent = 'You're-wild';
+  document.getElementById('drawerTitle').textContent = "You're-wild";
   renderForm(planFormState);
   document.getElementById('drawerBody').insertAdjacentHTML('afterbegin', `
     <div class="plan-error">
