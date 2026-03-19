@@ -1,258 +1,2309 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Ian Kenyon — Senior Product Manager building real things. Portfolio of active side projects." />
-  <title>Ian Kenyon</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="You're-wild">
+<meta name="theme-color" content="#2d4a2d">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<title>You're-wild — Discover &amp; Explore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<style>
+  /* ── TOKENS ───────────────────────────────────────────── */
+  :root {
+    --moss:      #2d4a2d;
+    --fern:      #3d6b3d;
+    --sage:      #7a9e7a;
+    --lichen:    #b5c9a8;
+    --cream:     #f4f0e6;
+    --parchment: #ede8da;
+    --soil:      #6b4f35;
+    --bark:      #3d2b1a;
+    --gold:      #c8a84b;
+    --corridor:  #f0a500;
+    --error:     #8b2020;
+    --shadow:    rgba(45,27,10,0.18);
+  }
 
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  /* ── RESET ────────────────────────────────────────────── */
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }
+  body { font-family: 'Lato', sans-serif; background: var(--bark); color: var(--cream); }
 
-  <link rel="stylesheet" href="css/style.css" />
+  /* ── APP SHELL ────────────────────────────────────────── */
+  #app { display: flex; flex-direction: column; height: 100dvh; }
+
+  /* ── HEADER ───────────────────────────────────────────── */
+  header {
+    flex-shrink: 0;
+    height: 60px;
+    background: var(--moss);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.25rem;
+    border-bottom: 1px solid rgba(181,201,168,0.2);
+    z-index: 1000;
+    gap: 1rem;
+  }
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--lichen);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    flex-shrink: 0;
+  }
+
+  /* ── POSTCODE SEARCH (header) ─────────────────────────── */
+  .search-wrap {
+    flex: 1;
+    max-width: 340px;
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+  }
+  .search-input {
+    flex: 1;
+    height: 34px;
+    padding: 0 0.75rem;
+    border-radius: 4px 0 0 4px;
+    border: 1px solid rgba(181,201,168,0.35);
+    border-right: none;
+    background: rgba(255,255,255,0.1);
+    color: var(--cream);
+    font-family: 'Lato', sans-serif;
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .search-input::placeholder { color: rgba(181,201,168,0.5); }
+  .search-input:focus { background: rgba(255,255,255,0.15); border-color: var(--lichen); }
+  .search-btn {
+    height: 34px;
+    padding: 0 0.85rem;
+    border-radius: 0 4px 4px 0;
+    border: 1px solid rgba(181,201,168,0.35);
+    background: var(--fern);
+    color: white;
+    font-family: 'Lato', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+  .search-btn:hover { background: #4a7e4a; }
+  .search-clear {
+    background: none;
+    border: none;
+    color: rgba(181,201,168,0.6);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 0 0.25rem;
+    line-height: 1;
+    display: none;
+    transition: color 0.15s;
+    flex-shrink: 0;
+  }
+  .search-clear:hover { color: var(--lichen); }
+  .search-clear.show { display: block; }
+
+  .site-count {
+    font-size: 0.75rem;
+    color: rgba(181,201,168,0.7);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .site-count strong { color: var(--gold); font-weight: 700; }
+
+  /* ── FILTER BAR (below header, full width) ────────────── */
+  .filter-bar {
+    flex-shrink: 0;
+    height: 44px;
+    background: rgba(36,58,36,0.98);
+    border-bottom: 1px solid rgba(181,201,168,0.15);
+    display: flex;
+    align-items: center;
+    padding: 0 1rem;
+    gap: 0.4rem;
+    z-index: 900;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .filter-bar::-webkit-scrollbar { display: none; }
+  .filter-label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(181,201,168,0.45);
+    white-space: nowrap;
+    margin-right: 0.25rem;
+    flex-shrink: 0;
+  }
+  .filter-btn {
+    padding: 0.25rem 0.8rem;
+    border-radius: 20px;
+    font-family: 'Lato', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border: 1px solid rgba(181,201,168,0.25);
+    color: rgba(181,201,168,0.75);
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .filter-btn:hover { color: var(--lichen); border-color: var(--lichen); }
+  .filter-btn.active { background: var(--fern); border-color: var(--fern); color: white; }
+  .filter-divider {
+    width: 1px; height: 20px;
+    background: rgba(181,201,168,0.2);
+    flex-shrink: 0; margin: 0 0.4rem;
+  }
+  .rewild-btn {
+    padding: 0.25rem 0.9rem;
+    border-radius: 20px;
+    font-family: 'Lato', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .rewild-btn:hover { background: var(--gold); color: var(--bark); }
+
+  /* ── STORY 3: PLAN DRAWER ─────────────────────────────── */
+  .plan-drawer {
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 420px;
+    background: var(--cream);
+    color: var(--bark);
+    z-index: 800;
+    display: none;
+    flex-direction: column;
+    box-shadow: -6px 0 32px var(--shadow);
+    animation: slideIn 0.3s cubic-bezier(0.4,0,0.2,1);
+  }
+  .plan-drawer.open { display: flex; }
+
+  .drawer-header {
+    background: var(--moss);
+    padding: 1.1rem 1.25rem 0.9rem;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .drawer-eyebrow {
+    font-size: 0.6rem; font-weight: 700;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--gold); margin-bottom: 0.3rem;
+  }
+  .drawer-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem; font-weight: 700;
+    color: var(--cream); line-height: 1.2;
+  }
+  .drawer-close {
+    position: absolute; top: 0.75rem; right: 1rem;
+    background: none; border: none;
+    color: rgba(181,201,168,0.7); font-size: 1.4rem;
+    cursor: pointer; line-height: 1; padding: 0.25rem;
+    transition: color 0.15s;
+  }
+  .drawer-close:hover { color: var(--lichen); }
+  .drawer-body { flex: 1; overflow-y: auto; padding: 1.25rem; }
+  .drawer-body::-webkit-scrollbar { width: 4px; }
+  .drawer-body::-webkit-scrollbar-track { background: var(--parchment); }
+  .drawer-body::-webkit-scrollbar-thumb { background: var(--lichen); border-radius: 2px; }
+
+  /* Form */
+  .form-group { margin-bottom: 1rem; }
+  .form-label {
+    display: block; font-size: 0.68rem; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--soil); margin-bottom: 0.35rem;
+  }
+  .form-input, .form-select {
+    width: 100%; height: 38px;
+    padding: 0 0.75rem;
+    border: 1px solid rgba(107,79,53,0.25);
+    border-radius: 4px;
+    background: white;
+    font-family: 'Lato', sans-serif;
+    font-size: 0.88rem;
+    color: var(--bark);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .form-input:focus, .form-select:focus { border-color: var(--fern); }
+  .form-input.error { border-color: var(--error); }
+
+  .goals-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem;
+  }
+  .goal-chip {
+    padding: 0.4rem 0.6rem;
+    border: 1px solid rgba(61,107,61,0.25);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--fern);
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: left;
+    font-family: 'Lato', sans-serif;
+  }
+  .goal-chip:hover { border-color: var(--fern); background: rgba(61,107,61,0.05); }
+  .goal-chip.selected { background: var(--fern); color: white; border-color: var(--fern); }
+  .goals-hint { font-size: 0.7rem; color: var(--soil); margin-top: 0.35rem; font-style: italic; }
+
+  .generate-btn {
+    width: 100%; height: 44px;
+    background: var(--fern);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-family: 'Lato', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: background 0.15s;
+    margin-top: 0.5rem;
+    display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+  }
+  .generate-btn:hover:not(:disabled) { background: #4a7e4a; }
+  .generate-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .back-btn {
+    display: flex; align-items: center; gap: 0.4rem;
+    background: none; border: none;
+    color: var(--soil); font-family: 'Lato', sans-serif;
+    font-size: 0.78rem; font-weight: 700;
+    cursor: pointer; padding: 0; margin-bottom: 1rem;
+    letter-spacing: 0.04em; text-transform: uppercase;
+    transition: color 0.15s;
+  }
+  .back-btn:hover { color: var(--fern); }
+
+  /* Loading state */
+  .plan-loading {
+    text-align: center;
+    padding: 2.5rem 1rem;
+  }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid rgba(61,107,61,0.2);
+    border-top-color: var(--fern);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 1rem;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .plan-loading p { font-size: 0.85rem; color: var(--soil); line-height: 1.6; }
+
+  /* Error state */
+  .plan-error {
+    background: rgba(139,32,32,0.06);
+    border: 1px solid rgba(139,32,32,0.2);
+    border-left: 3px solid var(--error);
+    border-radius: 0 4px 4px 0;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  .plan-error p { font-size: 0.83rem; color: var(--error); line-height: 1.5; margin-bottom: 0.5rem; }
+  .retry-btn {
+    font-size: 0.75rem; font-weight: 700; font-family: 'Lato', sans-serif;
+    color: var(--error); background: none; border: 1px solid var(--error);
+    border-radius: 3px; padding: 0.3rem 0.75rem; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .retry-btn:hover { background: var(--error); color: white; }
+
+  /* Plan output */
+  .plan-intro {
+    font-size: 0.83rem; color: var(--soil);
+    line-height: 1.6; margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(107,79,53,0.12);
+  }
+  .season-block { margin-bottom: 1.5rem; }
+  .season-title {
+    font-size: 0.65rem; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--gold); margin-bottom: 0.6rem;
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+  .plant-card {
+    background: white;
+    border: 1px solid rgba(107,79,53,0.12);
+    border-radius: 6px;
+    padding: 0.85rem;
+    margin-bottom: 0.5rem;
+  }
+  .plant-card-top {
+    display: flex; align-items: flex-start;
+    justify-content: space-between; gap: 0.5rem;
+    margin-bottom: 0.4rem;
+  }
+  .plant-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.95rem; font-weight: 700;
+    color: var(--moss); line-height: 1.2;
+  }
+  .plant-latin {
+    font-size: 0.72rem; color: var(--soil);
+    font-style: italic; margin-top: 0.1rem;
+  }
+  .plant-type-badge {
+    padding: 0.15rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.65rem; font-weight: 700;
+    letter-spacing: 0.04em; text-transform: uppercase;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .badge-tree    { background: rgba(45,122,45,0.1);  color: #2d7a2d; }
+  .badge-shrub   { background: rgba(61,107,61,0.1);  color: var(--fern); }
+  .badge-ground  { background: rgba(200,168,75,0.15); color: var(--soil); }
+  .badge-climber { background: rgba(122,95,158,0.1); color: #7a5f9e; }
+  .badge-other   { background: rgba(107,79,53,0.1);  color: var(--soil); }
+
+  .plant-reason {
+    font-size: 0.78rem; color: var(--bark);
+    line-height: 1.55; margin-bottom: 0.35rem;
+  }
+  .plant-wildlife {
+    font-size: 0.72rem; color: var(--fern);
+    font-weight: 700;
+  }
+  .plant-wildlife span { font-weight: 400; color: var(--soil); }
+
+  .plant-nursery {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(107,79,53,0.1);
+    font-size: 0.75rem;
+    color: var(--soil);
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+  }
+  .plant-nursery a {
+    color: var(--fern);
+    font-weight: 700;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(61,107,61,0.3);
+    transition: border-color 0.15s;
+  }
+  .plant-nursery a:hover { border-bottom-color: var(--fern); }
+  .plant-nursery span { color: rgba(107,79,53,0.7); font-style: italic; }
+  .plant-nursery.no-nursery span { color: rgba(107,79,53,0.5); font-style: italic; }
+
+  /* Mobile drawer */
+  @media (max-width: 640px) {
+    .plan-drawer {
+      top: auto; left: 0; right: 0; bottom: 0;
+      width: 100%;
+      max-width: 100vw;
+      height: 80%;
+      animation: slideUp 0.3s cubic-bezier(0.4,0,0.2,1);
+      overflow-x: hidden;
+    }
+  }
+
+  /* ── SHARED MAP AREA ──────────────────────────────────── */
+  .main { flex: 1; display: flex; overflow: hidden; position: relative; min-height: 0; }
+
+  /* ── MAP ──────────────────────────────────────────────── */
+  #map { flex: 1; height: 100%; z-index: 1; }
+
+  /* ── SEARCH ERROR TOAST ───────────────────────────────── */
+  .search-error {
+    position: absolute;
+    top: 0.75rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 600;
+    background: var(--error);
+    color: white;
+    padding: 0.5rem 1.25rem;
+    border-radius: 4px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    display: none;
+    white-space: nowrap;
+  }
+  .search-error.show { display: block; animation: fadeIn 0.2s ease; }
+
+  /* ── CORRIDOR PANEL (floats over map, left side) ──────── */
+  .corridor-panel {
+    position: absolute;
+    bottom: 1.5rem;
+    right: 3.5rem;
+    z-index: 500;
+    width: 240px;
+    background: rgba(36,58,36,0.97);
+    border-radius: 6px;
+    padding: 1rem;
+    box-shadow: 0 4px 20px var(--shadow);
+    backdrop-filter: blur(6px);
+    display: none;
+    animation: fadeIn 0.25s ease;
+  }
+  .corridor-panel.show { display: block; }
+  .corridor-title {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--corridor);
+    margin-bottom: 0.5rem;
+  }
+  .corridor-body {
+    font-size: 0.78rem;
+    color: var(--lichen);
+    line-height: 1.55;
+  }
+  .corridor-sites {
+    margin-top: 0.65rem;
+    padding-top: 0.65rem;
+    border-top: 1px solid rgba(181,201,168,0.15);
+  }
+  .corridor-site-item {
+    font-size: 0.73rem;
+    color: rgba(181,201,168,0.75);
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .corridor-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── NO-RESULTS STATE ─────────────────────────────────── */
+  .empty-state {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 400;
+    background: rgba(45,74,45,0.97);
+    padding: 1.5rem 2rem;
+    border-radius: 8px;
+    text-align: center;
+    max-width: 280px;
+    display: none;
+    box-shadow: 0 8px 32px var(--shadow);
+  }
+  .empty-state.show { display: block; }
+  .empty-state-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+  .empty-state h3 { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--lichen); margin-bottom: 0.4rem; }
+  .empty-state p { font-size: 0.8rem; color: rgba(181,201,168,0.7); line-height: 1.5; }
+
+  /* ── NEARBY EMPTY STATE ───────────────────────────────── */
+  .nearby-empty {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 400;
+    background: rgba(45,74,45,0.97);
+    padding: 1.5rem 2rem;
+    border-radius: 8px;
+    text-align: center;
+    max-width: 300px;
+    display: none;
+    box-shadow: 0 8px 32px var(--shadow);
+  }
+  .nearby-empty.show { display: block; animation: fadeIn 0.25s ease; }
+  .nearby-empty-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+  .nearby-empty h3 { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--lichen); margin-bottom: 0.5rem; }
+  .nearby-empty p { font-size: 0.8rem; color: rgba(181,201,168,0.7); line-height: 1.6; }
+  .nearby-empty-action {
+    margin-top: 0.85rem;
+    font-size: 0.75rem;
+    color: var(--gold);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    text-decoration: underline;
+    background: none;
+    border: none;
+    font-family: 'Lato', sans-serif;
+  }
+
+  /* ── LEGEND ───────────────────────────────────────────── */
+  .map-legend {
+    position: absolute;
+    bottom: 1.5rem;
+    left: 1rem;
+    z-index: 500;
+    background: rgba(45,74,45,0.95);
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 4px 16px var(--shadow);
+  }
+  .legend-title { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.5rem; }
+  .legend-item { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; font-size: 0.72rem; color: var(--lichen); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.4); flex-shrink: 0; }
+  .legend-line { width: 18px; height: 3px; border-radius: 2px; flex-shrink: 0; background: var(--corridor); opacity: 0.85; }
+
+  /* ── DETAIL PANEL ─────────────────────────────────────── */
+  .detail-panel {
+    width: 340px;
+    flex-shrink: 0;
+    height: 100%;
+    background: var(--cream);
+    color: var(--bark);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 200;
+    box-shadow: -4px 0 24px var(--shadow);
+    animation: slideIn 0.28s cubic-bezier(0.4,0,0.2,1);
+  }
+  .detail-panel.open { display: flex; }
+  @keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+
+  .panel-header { background: var(--moss); padding: 1.25rem 1.25rem 1rem; flex-shrink: 0; position: relative; }
+  .panel-eyebrow { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.4rem; }
+  .panel-title { font-family: 'Playfair Display', serif; font-size: 1.3rem; font-weight: 700; color: var(--cream); line-height: 1.2; }
+  .panel-close { position: absolute; top: 0.75rem; right: 1rem; background: none; border: none; color: rgba(181,201,168,0.7); font-size: 1.4rem; cursor: pointer; line-height: 1; padding: 0.25rem; transition: color 0.15s; }
+  .panel-close:hover { color: var(--lichen); }
+  .panel-body { flex: 1; overflow-y: auto; padding: 1.25rem; }
+  .panel-body::-webkit-scrollbar { width: 4px; }
+  .panel-body::-webkit-scrollbar-track { background: var(--parchment); }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--lichen); border-radius: 2px; }
+
+  .detail-row { display: flex; gap: 0.6rem; margin-bottom: 0.75rem; align-items: flex-start; }
+  .detail-icon { font-size: 1rem; flex-shrink: 0; margin-top: 0.1rem; }
+  .detail-label { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--soil); margin-bottom: 0.15rem; }
+  .detail-value { font-size: 0.88rem; color: var(--bark); line-height: 1.45; }
+  .species-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.25rem; }
+  .species-tag { background: rgba(61,107,61,0.1); color: var(--fern); border: 1px solid rgba(61,107,61,0.2); padding: 0.15rem 0.55rem; border-radius: 12px; font-size: 0.72rem; font-weight: 700; }
+  .type-badge { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.65rem; border-radius: 12px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; }
+  .visit-box { background: rgba(61,107,61,0.07); border: 1px solid rgba(61,107,61,0.15); border-left: 3px solid var(--fern); border-radius: 0 4px 4px 0; padding: 0.75rem; margin-top: 1rem; font-size: 0.83rem; color: var(--soil); line-height: 1.5; }
+  .visit-box.no-visit { border-left-color: var(--gold); background: rgba(200,168,75,0.06); border-color: rgba(200,168,75,0.2); border-left-color: var(--gold); }
+  .visit-box strong { color: var(--moss); display: block; margin-bottom: 0.25rem; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; }
+  .divider { height: 1px; background: rgba(107,79,53,0.12); margin: 1rem 0; }
+
+  /* ── NEARBY HIGHLIGHT RING ────────────────────────────── */
+  /* applied via JS to nearby markers */
+
+  /* ── LEAFLET POPUP OVERRIDES ──────────────────────────── */
+  .leaflet-popup-content-wrapper { border-radius: 4px !important; font-family: 'Lato', sans-serif !important; box-shadow: 0 4px 20px var(--shadow) !important; }
+  .leaflet-popup-content { margin: 0.75rem 1rem !important; }
+  .lp-name { font-family: 'Playfair Display', serif; font-size: 0.95rem; font-weight: 700; color: var(--moss); margin-bottom: 0.2rem; }
+  .lp-meta { font-size: 0.75rem; color: var(--soil); }
+  .lp-nearby { font-size: 0.72rem; color: var(--corridor); font-weight: 700; margin-top: 0.2rem; }
+  .lp-open { display: inline-block; margin-top: 0.5rem; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fern); cursor: pointer; background: none; border: none; border-bottom: 1px solid rgba(61,107,61,0.3); padding-bottom: 1px; font-family: 'Lato', sans-serif; transition: border-color 0.15s; }
+  .lp-open:hover { border-bottom-color: var(--fern); }
+
+  /* ── BOTTOM NAV (mobile only) ────────────────────────── */
+  .bottom-nav {
+    display: none;
+  }
+  @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  /* ── MOBILE SEARCH BAR (floating, inside map) ────────── */
+  .mobile-search-bar {
+    display: none;
+  }
+
+  /* ── MOBILE FILTER SHEET ─────────────────────────────── */
+  .mobile-filter-overlay {
+    display: none;
+  }
+
+  /* ── MY WILD SCREEN (mobile tab 2) ───────────────────── */
+  .mywild-screen {
+    display: none;
+  }
+
+  /* ── MOBILE ───────────────────────────────────────────── */
+  @media (max-width: 640px) {
+
+    /* Hide desktop chrome */
+    header { display: none !important; }
+    .filter-bar { display: none !important; }
+    .map-legend { display: none; }
+
+    /* App shell adjusts for bottom nav */
+    #app { padding-bottom: 0; }
+    .main {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      bottom: 64px;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ── BOTTOM NAV ── */
+    .bottom-nav {
+      display: flex;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 64px;
+      background: var(--moss);
+      border-top: 1px solid rgba(181,201,168,0.15);
+      z-index: 2000;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.25);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .nav-tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: rgba(181,201,168,0.5);
+      font-family: 'Lato', sans-serif;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      transition: color 0.15s;
+      padding-bottom: 2px;
+    }
+    .nav-tab.active { color: var(--gold); }
+    .nav-tab svg { width: 22px; height: 22px; stroke-width: 1.8; }
+    .nav-tab-label { line-height: 1; }
+
+    /* ── DISCOVER TAB LAYOUT ── */
+    .discover-tab-content {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      bottom: 64px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Mobile search bar floating over map */
+    .mobile-search-bar {
+      display: flex;
+      position: absolute;
+      top: env(safe-area-inset-top, 12px);
+      margin-top: 12px;
+      left: 12px; right: 12px;
+      z-index: 1000;
+      gap: 8px;
+      align-items: center;
+    }
+    .mobile-search-inner {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      background: var(--moss);
+      border: 1px solid rgba(181,201,168,0.2);
+      border-radius: 12px;
+      height: 44px;
+      padding: 0 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+      gap: 8px;
+    }
+    .mobile-search-inner svg { flex-shrink: 0; color: rgba(181,201,168,0.6); width: 16px; height: 16px; }
+    .mobile-search-input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--cream);
+      font-family: 'Lato', sans-serif;
+      font-size: 0.9rem;
+      min-width: 0;
+    }
+    .mobile-search-input::placeholder { color: rgba(181,201,168,0.45); }
+    .mobile-search-go {
+      background: var(--fern);
+      border: none;
+      border-radius: 8px;
+      height: 34px;
+      padding: 0 14px;
+      color: white;
+      font-family: 'Lato', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+    .mobile-search-clear {
+      background: none;
+      border: none;
+      color: rgba(181,201,168,0.5);
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+      display: none;
+    }
+    .mobile-search-clear.show { display: block; }
+
+    /* Filter strip floating below search */
+    .mobile-filter-strip {
+      display: flex;
+      position: absolute;
+      top: calc(env(safe-area-inset-top, 12px) + 64px);
+      left: 12px; right: 12px;
+      z-index: 999;
+      gap: 6px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .mobile-filter-strip::-webkit-scrollbar { display: none; }
+    .mobile-filter-chip {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 0 12px;
+      height: 32px;
+      border-radius: 16px;
+      border: 1px solid rgba(181,201,168,0.25);
+      background: rgba(45,74,45,0.92);
+      backdrop-filter: blur(8px);
+      color: rgba(181,201,168,0.8);
+      font-family: 'Lato', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .mobile-filter-chip.active {
+      background: var(--fern);
+      border-color: var(--fern);
+      color: white;
+    }
+    .mobile-filter-chip .chip-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* Map fills remaining space */
+    #map {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      bottom: 0;
+      z-index: 1;
+    }
+
+    /* Site count badge */
+    .mobile-count-badge {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 500;
+      background: rgba(45,74,45,0.9);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(181,201,168,0.2);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-family: 'Lato', sans-serif;
+      font-size: 0.72rem;
+      color: rgba(181,201,168,0.8);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    .mobile-count-badge strong { color: var(--gold); }
+
+    /* Detail panel slides up from bottom */
+    .detail-panel {
+      position: fixed !important;
+      bottom: 64px; left: 0; right: 0;
+      width: 100% !important;
+      max-width: 100vw;
+      height: 60% !important;
+      display: none;
+      box-shadow: 0 -4px 24px var(--shadow);
+      overflow-x: hidden;
+      z-index: 1500 !important;
+    }
+    .detail-panel.open { display: flex; animation: slideUp 0.28s cubic-bezier(0.4,0,0.2,1); }
+
+    /* Plan drawer slides up from bottom */
+    .plan-drawer {
+      top: auto !important;
+      left: 0; right: 0;
+      bottom: 64px !important;
+      width: 100% !important;
+      max-width: 100vw;
+      height: 80% !important;
+      animation: slideUp 0.3s cubic-bezier(0.4,0,0.2,1);
+      overflow-x: hidden;
+      z-index: 1500 !important;
+    }
+
+    .corridor-panel { bottom: 16px; right: 12px; left: 12px; width: auto; }
+    .drawer-header { padding: 0.9rem 1rem 0.75rem; }
+    .drawer-body { padding: 1rem; }
+
+    /* ── MY WILD SCREEN ── */
+    .mywild-screen {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      bottom: 64px;
+      background: var(--cream);
+      color: var(--bark);
+      flex-direction: column;
+      z-index: 1800;
+      overflow: hidden;
+    }
+    .mywild-screen.active { display: flex; }
+
+    .mywild-header {
+      background: var(--moss);
+      padding: 16px 20px 14px;
+      padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
+      flex-shrink: 0;
+    }
+    .mywild-eyebrow {
+      font-size: 0.6rem; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--gold); margin-bottom: 4px;
+    }
+    .mywild-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.35rem; font-weight: 700;
+      color: var(--cream); line-height: 1.2;
+    }
+    .mywild-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .mywild-body::-webkit-scrollbar { display: none; }
+  }
+
+  /* ── DISCOVER TAB (only needed on mobile) ─────────────── */
+  @media (min-width: 641px) {
+    .bottom-nav { display: none !important; }
+    .mobile-search-bar { display: none !important; }
+    .mobile-filter-strip { display: none !important; }
+    .mobile-count-badge { display: none !important; }
+    .mywild-screen { display: none !important; }
+  }
+</style>
 </head>
 <body>
+<div id="app">
 
-  <!-- ═══════════════════════════════════════════
-       NAVIGATION
-  ═══════════════════════════════════════════ -->
-  <header class="site-header" id="site-header">
-    <nav class="nav-inner">
-      <a href="#top" class="nav-logo" aria-label="Ian Kenyon — home">
-        <img src="assets/logo/ik-logo.png" alt="IK logo" class="logo-img" />
-        <span class="nav-logo-text">Ian Kenyon</span>
-      </a>
+  <!-- HEADER -->
+  <header>
+    <div class="logo"><svg viewBox="0 0 255 68" height="38" xmlns="http://www.w3.org/2000/svg" aria-label="You're-wild"><defs><linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#c8a84b"/><stop offset="100%" style="stop-color:#5a8a3a"/></linearGradient></defs><ellipse cx="24" cy="18" rx="3.5" ry="7" fill="#5a8a3a" transform="rotate(-40 24 18)" opacity="0.95"/><ellipse cx="33" cy="15" rx="3" ry="6" fill="#7ab44a" transform="rotate(-10 33 15)" opacity="0.9"/><ellipse cx="17" cy="22" rx="3" ry="5.5" fill="#4a7a2a" transform="rotate(-65 17 22)" opacity="0.85"/><ellipse cx="101" cy="16" rx="3.5" ry="7" fill="#6aaa3a" transform="rotate(-15 101 16)" opacity="0.95"/><ellipse cx="112" cy="14" rx="3" ry="6" fill="#5a8a3a" transform="rotate(20 112 14)" opacity="0.9"/><ellipse cx="92" cy="18" rx="3" ry="5" fill="#4a7a2a" transform="rotate(-40 92 18)" opacity="0.85"/><text x="18" y="52" font-family="Georgia, serif" font-size="36" font-weight="400" fill="#c8a84b">You</text><text x="82" y="52" font-family="Georgia, serif" font-size="36" font-weight="400" fill="#c8a84b">'</text><text x="90" y="52" font-family="Impact, Arial Black, sans-serif" font-size="34" font-weight="900" fill="url(#rg)" letter-spacing="1">re</text><text x="129" y="52" font-family="Impact, Arial Black, sans-serif" font-size="34" font-weight="900" fill="#5a8a3a" letter-spacing="1">-wild</text></svg></div>
 
-      <button class="nav-toggle" id="nav-toggle" aria-label="Open menu" aria-expanded="false">
-        <span></span><span></span><span></span>
-      </button>
+    <div class="search-wrap">
+      <input
+        class="search-input"
+        id="postcodeInput"
+        type="text"
+        placeholder="Enter postcode or town…"
+        maxlength="10"
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false"
+        onkeydown="if(event.key==='Enter') runSearch()"
+        oninput="onSearchInput()"
+        aria-label="Search by postcode or town"
+      />
+      <button class="search-btn" onclick="runSearch()">Search</button>
+      <button class="search-clear" id="searchClear" onclick="clearSearch()" aria-label="Clear search">×</button>
+    </div>
 
-      <ul class="nav-links" id="nav-links" role="list">
-        <li><a href="#about" class="nav-link">About</a></li>
-        <li><a href="#projects" class="nav-link">Projects</a></li>
-        <li><a href="#get-involved" class="nav-link">Get Involved</a></li>
-        <li><a href="#contact" class="nav-link nav-link--cta">Say Hello</a></li>
-      </ul>
-    </nav>
+    <span class="site-count"><strong id="visible-count">—</strong> sites in view</span>
   </header>
 
-  <main id="top">
+  <!-- FILTER BAR -->
+  <div class="filter-bar" role="group" aria-label="Filter by habitat type">
+    <span class="filter-label">Filter:</span>
+    <button class="filter-btn active" data-type="all"      onclick="setFilter('all',this)">All sites</button>
+    <button class="filter-btn"        data-type="woodland" onclick="setFilter('woodland',this)">Woodland</button>
+    <button class="filter-btn"        data-type="wetland"  onclick="setFilter('wetland',this)">Wetland</button>
+    <button class="filter-btn"        data-type="meadow"   onclick="setFilter('meadow',this)">Meadow</button>
+    <button class="filter-btn"        data-type="garden"   onclick="setFilter('garden',this)">Garden</button>
+    <button class="filter-btn"        data-type="reserve"  onclick="setFilter('reserve',this)">Reserve</button>
+    <div class="filter-divider"></div>
+    <button class="rewild-btn" onclick="openPlanDrawer()">🌱 Rewild my garden</button>
+  </div>
 
-    <!-- ═══════════════════════════════════════════
-         HERO
-    ═══════════════════════════════════════════ -->
-    <section class="hero" aria-labelledby="hero-heading">
-      <div class="hero-inner">
-        <div class="hero-content">
-          <p class="hero-label animate-in" style="--delay: 0.1s">Product Leader · 0 to scale · Brighton</p>
-          <h1 class="hero-heading animate-in" id="hero-heading" style="--delay: 0.25s">
-            Ian<br />Kenyon
-          </h1>
-          <p class="hero-statement animate-in" style="--delay: 0.45s">
-            Experimenting with real world ideas.<br />
-            <em>See how the projects unfold.</em>
-          </p>
-          <div class="hero-actions animate-in" style="--delay: 0.65s">
-            <a href="#projects" class="btn btn--primary">See the Projects</a>
-            <a href="#get-involved" class="btn btn--ghost">Get Involved</a>
-          </div>
-        </div>
+  <!-- MAIN -->
+  <div class="main">
 
-        <div class="hero-mark animate-in" style="--delay: 0.5s" aria-hidden="true">
-          <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <text x="10" y="160" font-family="Lora, Georgia, serif" font-size="140" font-weight="700" fill="#1E2B33" opacity="0.07">i</text>
-            <text x="72" y="160" font-family="Lora, Georgia, serif" font-size="140" font-weight="700" fill="#C8922A" opacity="0.12">K</text>
-          </svg>
-        </div>
+    <!-- MAP -->
+    <div id="map" role="main" aria-label="Map of rewilded sites"></div>
+
+    <!-- SEARCH ERROR TOAST -->
+    <div class="search-error" id="searchError"></div>
+
+    <!-- FILTER EMPTY STATE -->
+    <div class="empty-state" id="emptyState">
+      <div class="empty-state-icon">🔍</div>
+      <h3>No sites found</h3>
+      <p>No registered sites of this type are visible. Try a different filter or zoom out.</p>
+    </div>
+
+    <!-- NEARBY EMPTY STATE -->
+    <div class="nearby-empty" id="nearbyEmpty">
+      <div class="nearby-empty-icon">🌱</div>
+      <h3>No rewilded sites nearby — yet</h3>
+      <p>There aren't any registered sites within 80km of that location. That doesn't mean rewilding isn't happening — it means you could be one of the first to help it grow here.</p>
+      <button class="nearby-empty-action" onclick="clearSearch()">See all sites instead →</button>
+    </div>
+
+    <!-- CORRIDOR PANEL -->
+    <div class="corridor-panel" id="corridorPanel">
+      <div class="corridor-title">🐾 Wildlife Corridor Detected</div>
+      <div class="corridor-body" id="corridorBody"></div>
+      <div class="corridor-sites" id="corridorSites"></div>
+    </div>
+
+    <!-- LEGEND -->
+    <div class="map-legend">
+      <div class="legend-title">Habitat type</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#2d7a2d"></span>Woodland</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#3d8fad"></span>Wetland</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#c8a84b"></span>Meadow</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#7a5f9e"></span>Garden</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#b54b4b"></span>Reserve</div>
+      <div class="legend-item" id="legendCorridor" style="display:none"><span class="legend-line"></span>Corridor</div>
+    </div>
+
+    <!-- DETAIL PANEL -->
+    <div class="detail-panel" id="detailPanel" role="complementary" aria-label="Site details">
+      <div class="panel-header">
+        <div class="panel-eyebrow" id="panelEyebrow">Rewilded Site</div>
+        <div class="panel-title"   id="panelTitle">—</div>
+        <button class="panel-close" onclick="closePanel()" aria-label="Close">×</button>
       </div>
+      <div class="panel-body" id="panelBody"></div>
+    </div>
 
-      <div class="hero-scroll-hint animate-in" style="--delay: 1.1s" aria-hidden="true">
-        <span>Scroll</span>
-        <svg width="16" height="24" viewBox="0 0 16 24" fill="none">
-          <rect x="1" y="1" width="14" height="22" rx="7" stroke="currentColor" stroke-width="1.5"/>
-          <circle class="scroll-dot" cx="8" cy="7" r="2" fill="currentColor"/>
-        </svg>
+    <!-- STORY 3: PLAN DRAWER -->
+    <div class="plan-drawer" id="planDrawer" role="complementary" aria-label="You're-wild">
+      <div class="drawer-header">
+        <div class="drawer-eyebrow">Your garden</div>
+        <div class="drawer-title" id="drawerTitle">You're-wild</div>
+        <button class="drawer-close" onclick="closePlanDrawer()" aria-label="Close">×</button>
       </div>
-    </section>
-
-    <!-- ═══════════════════════════════════════════
-         ABOUT
-    ═══════════════════════════════════════════ -->
-    <section class="about section" id="about" aria-labelledby="about-heading">
-      <div class="container">
-        <div class="about-inner">
-          <div class="about-text">
-            <h2 class="section-label">About</h2>
-            <p class="about-lead">
-              As an experienced Product Leader who's worked across the full spectrum of the software landscape, I'm used to building things from nothing. I've always had so many ideas, and rather than wait, I'm building.
-            </p>
-            <p class="about-body">
-              These projects are real: live code, real users, genuine problems worth solving. I build them by harnessing the new capabilities of working with AI. If you're a PM, a founder, or just someone curious about what I do, please take a look around or get involved.
-            </p>
-            <div class="about-links">
-              <a href="https://www.linkedin.com/in/iankenyon" class="about-link" target="_blank" rel="noopener noreferrer">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                </svg>
-                LinkedIn
-              </a>
-              <a href="https://github.com/houseoflamport" class="about-link" target="_blank" rel="noopener noreferrer">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/>
-                </svg>
-                GitHub
-              </a>
-            </div>
-          </div>
-          <div class="about-accent" aria-hidden="true">
-            <div class="accent-line"></div>
-            <blockquote class="accent-quote">
-              "Dedicating time to validating those ideas you have along the way."
-            </blockquote>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══════════════════════════════════════════
-         PROJECTS
-    ═══════════════════════════════════════════ -->
-    <section class="projects section" id="projects" aria-labelledby="projects-heading">
-      <div class="container">
-        <h2 class="section-label" id="projects-heading">Active Projects</h2>
-        <p class="section-intro">Live experiments. Click through to see the problem, the approach, and how to try them.</p>
-
-        <div class="projects-grid">
-
-          <!-- Slipstream -->
-          <article class="project-card" aria-labelledby="card-slipstream">
-            <a href="slipstream.html" class="project-card-link" tabindex="-1" aria-hidden="true"></a>
-            <div class="project-card-image">
-              <div class="project-card-image-placeholder" aria-hidden="true">
-                <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="40" cy="40" r="28" stroke="#C8922A" stroke-width="1.5" stroke-dasharray="4 3"/>
-                  <path d="M28 40 L52 40 M44 32 L52 40 L44 48" stroke="#C8922A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <circle cx="28" cy="40" r="3" fill="#1E2B33"/>
-                </svg>
-              </div>
-            </div>
-            <div class="project-card-body">
-              <div class="project-card-meta">
-                <span class="status-badge status-badge--active">Active development</span>
-              </div>
-              <h3 class="project-card-title" id="card-slipstream">
-                <a href="slipstream.html">Slipstream</a>
-              </h3>
-              <p class="project-card-desc">Train and compete with running buddies on the other side of the world, challenge others or run against the best.</p>
-              <div class="project-card-actions">
-                <a href="slipstream.html" class="btn btn--primary btn--sm">View Project</a>
-                <a href="slipstream.html#feedback" class="btn btn--ghost btn--sm">Leave Feedback</a>
-              </div>
-            </div>
-          </article>
-
-          <!-- You're-wild -->
-          <article class="project-card" aria-labelledby="card-rewild">
-            <a href="youre-wild.html" class="project-card-link" tabindex="-1" aria-hidden="true"></a>
-            <div class="project-card-image">
-              <div class="project-card-image-placeholder" aria-hidden="true">
-                <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="40" cy="40" r="28" stroke="#C8922A" stroke-width="1.5" stroke-dasharray="4 3"/>
-                  <path d="M40 20 C40 20 26 34 26 44 a14 14 0 0 0 28 0 C54 34 40 20 40 20z" stroke="#1E2B33" stroke-width="1.5" fill="none"/>
-                  <path d="M40 32 C40 32 33 40 33 46 a7 7 0 0 0 14 0 C47 40 40 32 40 32z" fill="#C8922A" opacity="0.3"/>
-                </svg>
-              </div>
-            </div>
-            <div class="project-card-body">
-              <div class="project-card-meta">
-                <span class="status-badge status-badge--live">Live — gathering feedback</span>
-              </div>
-              <h3 class="project-card-title" id="card-rewild">
-                <a href="youre-wild.html">You're-wild</a>
-              </h3>
-              <p class="project-card-desc">A gateway to rewilding yourself and the natural world around you.</p>
-              <div class="project-card-actions">
-                <a href="youre-wild.html" class="btn btn--primary btn--sm">View Project</a>
-                <a href="youre-wild.html#feedback" class="btn btn--ghost btn--sm">Leave Feedback</a>
-              </div>
-            </div>
-          </article>
-
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══════════════════════════════════════════
-         GET INVOLVED
-    ═══════════════════════════════════════════ -->
-    <section class="get-involved section" id="get-involved" aria-labelledby="get-involved-heading">
-      <div class="container">
-        <h2 class="section-label" id="get-involved-heading">Get Involved</h2>
-        <p class="section-intro">
-          My projects are in active development and I'm genuinely interested in what you think. Click through to a project, try it, and become part of the process.
-        </p>
-        <div class="get-involved-cards">
-          <a href="slipstream.html#feedback" class="involve-card">
-            <span class="involve-card-title">Feedback on Slipstream →</span>
-            <span class="involve-card-sub">Try it out, how does it feel, what would compel you to use it long term?</span>
-          </a>
-          <a href="youre-wild.html#feedback" class="involve-card">
-            <span class="involve-card-title">Feedback on You're-wild →</span>
-            <span class="involve-card-sub">Explore the re-wilded world, work out how to bring that home with you and give me your thoughts</span>
-          </a>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- ═══════════════════════════════════════════
-       FOOTER
-  ═══════════════════════════════════════════ -->
-  <footer class="site-footer" id="contact">
-    <div class="container">
-      <div class="footer-inner">
-        <div class="footer-brand">
-          <img src="assets/logo/ik-logo.png" alt="IK logo" class="footer-logo" />
-          <p class="footer-hol">House of Lamport</p>
-        </div>
-
-        <div class="footer-contact">
-          <p class="footer-contact-label">Want to get in touch?</p>
-          <form class="footer-form" id="footer-contact-form" action="https://formspree.io/f/xdawyerw" method="POST" novalidate>
-            <div class="footer-form-row">
-              <input
-                type="email"
-                name="email"
-                id="footer-email"
-                class="footer-input"
-                placeholder="your@email.com"
-                required
-                aria-label="Your email address"
-              />
-              <button type="submit" class="btn btn--primary btn--sm">Send</button>
-            </div>
-            <p class="footer-form-note">Just your email — I'll be in touch.</p>
-            <p class="footer-form-success" id="footer-success" aria-live="polite" hidden>Thanks — I'll be in touch.</p>
-            <p class="footer-form-error" id="footer-error" aria-live="polite" hidden>Something went wrong. Try emailing me directly.</p>
-          </form>
-        </div>
-
-        <div class="footer-links">
-          <a href="https://www.linkedin.com/in/iankenyon" class="footer-link" target="_blank" rel="noopener noreferrer">LinkedIn</a>
-          <a href="https://github.com/houseoflamport" class="footer-link" target="_blank" rel="noopener noreferrer">GitHub</a>
-        </div>
-      </div>
-
-      <div class="footer-base">
-        <p>© 2026 Ian Kenyon</p>
+      <div class="drawer-body" id="drawerBody">
+        <!-- Form injected by JS -->
       </div>
     </div>
-  </footer>
 
-  <script src="js/main.js"></script>
-  <script src="js/forms.js"></script>
+  <!-- MOBILE SEARCH BAR (floats over map) -->
+  <div class="mobile-search-bar" id="mobileSearchBar">
+    <div class="mobile-search-inner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input
+        class="mobile-search-input"
+        id="mobilePostcodeInput"
+        type="text"
+        placeholder="Postcode or town…"
+        maxlength="10"
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false"
+        inputmode="search"
+        onkeydown="if(event.key==='Enter'){mobileSyncAndSearch();}"
+        oninput="onMobileSearchInput()"
+        aria-label="Search by postcode or town"
+      />
+      <button class="mobile-search-clear" id="mobileSearchClear" onclick="mobileClearSearch()">×</button>
+    </div>
+    <button class="mobile-search-go" onclick="mobileSyncAndSearch()">Search</button>
+  </div>
+
+  <!-- MOBILE FILTER STRIP -->
+  <div class="mobile-filter-strip" id="mobileFilterStrip">
+    <button class="mobile-filter-chip active" data-type="all" onclick="setMobileFilter('all',this)">All</button>
+    <button class="mobile-filter-chip" data-type="woodland" onclick="setMobileFilter('woodland',this)">
+      <span class="chip-dot" style="background:#2d7a2d"></span>Woodland
+    </button>
+    <button class="mobile-filter-chip" data-type="wetland" onclick="setMobileFilter('wetland',this)">
+      <span class="chip-dot" style="background:#3d8fad"></span>Wetland
+    </button>
+    <button class="mobile-filter-chip" data-type="meadow" onclick="setMobileFilter('meadow',this)">
+      <span class="chip-dot" style="background:#c8a84b"></span>Meadow
+    </button>
+    <button class="mobile-filter-chip" data-type="garden" onclick="setMobileFilter('garden',this)">
+      <span class="chip-dot" style="background:#7a5f9e"></span>Garden
+    </button>
+    <button class="mobile-filter-chip" data-type="reserve" onclick="setMobileFilter('reserve',this)">
+      <span class="chip-dot" style="background:#b54b4b"></span>Reserve
+    </button>
+  </div>
+
+  <!-- MOBILE SITE COUNT BADGE -->
+  <div class="mobile-count-badge" id="mobileCountBadge"><strong id="mobileVisibleCount">—</strong> sites in view</div>
+
+  </div><!-- .main -->
+
+  <!-- MY WILD SCREEN (mobile tab 2) -->
+  <div class="mywild-screen" id="mywildScreen">
+    <div class="mywild-header">
+      <div class="mywild-eyebrow">Your garden</div>
+      <div class="mywild-title">My Wild</div>
+    </div>
+    <div class="mywild-body" id="mywildBody">
+      <!-- Injected by JS -->
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav" id="bottomNav" aria-label="Main navigation">
+    <button class="nav-tab active" id="navDiscover" onclick="switchTab('discover')" aria-label="Discover">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"/></svg>
+      <span class="nav-tab-label">Discover</span>
+    </button>
+    <button class="nav-tab" id="navMywild" onclick="switchTab('mywild')" aria-label="My Wild">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22c0 0-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><path d="M12 8v8M8 12h8"/></svg>
+      <span class="nav-tab-label">My Wild</span>
+    </button>
+  </nav>
+
+</div><!-- #app -->
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// REWILD YOURSELF — MVP
+// ═══════════════════════════════════════════════════════════
+// KNOWN LIMITATIONS
+// - Map does not load on iOS Safari when opened inside Claude's
+//   artifact viewer (sandboxed iframe blocks external CDN scripts).
+//   This resolves automatically when hosted on a real domain (Phase 3).
+//   Explicitly retest on iOS Safari post-hosting before sharing with
+//   external testers.
+// - All site data is seeded/mocked. No live database.
+// - Postcode geocoding uses a free API (postcodes.io for UK,
+//   nominatim for Europe). Rate-limited; not for high traffic.
+// ═══════════════════════════════════════════════════════════
+
+// ── SHARED: SITE TYPE CONFIG ────────────────────────────────
+const TYPES = {
+  woodland: { color: '#2d7a2d', label: 'Woodland',       icon: '🌳' },
+  wetland:  { color: '#3d8fad', label: 'Wetland',        icon: '🦆' },
+  meadow:   { color: '#c8a84b', label: 'Meadow',         icon: '🌸' },
+  garden:   { color: '#7a5f9e', label: 'Garden',         icon: '🌱' },
+  reserve:  { color: '#b54b4b', label: 'Nature Reserve', icon: '🦅' },
+};
+
+// ── SHARED: SEED DATA ───────────────────────────────────────
+const SITES = [
+  // UK
+  { id:1,  name:'Knepp Wildland',           lat:51.00, lng:-0.35,  type:'reserve',  size:1400,  country:'England',     species:['Turtle dove','Purple emperor','Nightingale','White stork'],         visiting:'Open for guided safaris and camping year-round. Book via the Knepp website.' },
+  { id:2,  name:'Cors Dyfi Nature Reserve', lat:52.56, lng:-3.92,  type:'wetland',  size:190,   country:'Wales',       species:['Osprey','Reed warbler','Marsh harrier','Otter'],                    visiting:'Free public access. Visitor centre and hides on site.' },
+  { id:3,  name:'Carrifran Wildwood',       lat:55.40, lng:-3.26,  type:'woodland', size:640,   country:'Scotland',    species:['Downy birch','Rowan','Wood anemone','Ring ouzel'],                  visiting:'Open access at all times. No facilities on site.' },
+  { id:4,  name:'Dartmoor Rewilding',       lat:50.57, lng:-3.90,  type:'meadow',   size:85,    country:'England',     species:['Marsh fritillary','Bog asphodel','Dartford warbler'],               visiting:'Public footpaths cross the site. No booking required.' },
+  { id:5,  name:'Back Garden — Bristol',    lat:51.46, lng:-2.59,  type:'garden',   size:0.02,  country:'England',     species:['Hedgehog','Solitary bee','Slow worm','Common frog'],               visiting:null },
+  { id:6,  name:'Wildflower Wiltshire',     lat:51.20, lng:-1.80,  type:'meadow',   size:310,   country:'England',     species:['Greater butterfly orchid','Yellow rattle','Common spotted orchid'],  visiting:'Access by arrangement. Contact the estate office.' },
+  { id:7,  name:'Tay Reedbeds',             lat:56.42, lng:-2.97,  type:'wetland',  size:450,   country:'Scotland',    species:['Bittern','Water vole','Otter','Reed bunting'],                      visiting:'Public hides available. Scottish Wildlife Trust site.' },
+  { id:8,  name:'Sherwood Old Growth',      lat:53.20, lng:-1.07,  type:'woodland', size:55,    country:'England',     species:['Ancient oak','Purple hairstreak','Tawny owl'],                     visiting:'Open daily. Part of Sherwood Forest Country Park.' },
+  { id:9,  name:'Thames Rewild Garden',     lat:51.52, lng:-0.12,  type:'garden',   size:0.02,  country:'England',     species:['Swift box colony','Stag beetle','Foxglove'],                       visiting:null },
+  { id:10, name:'Handa Island',             lat:58.38, lng:-5.18,  type:'reserve',  size:3200,  country:'Scotland',    species:['Great skua','Puffin','Common seal','Razorbill'],                   visiting:'Seasonal ferry from Tarbet. Scottish Wildlife Trust.' },
+  { id:11, name:'Bunloit Estate',           lat:57.27, lng:-4.52,  type:'woodland', size:511,   country:'Scotland',    species:['Caledonian pine','Downy birch','Wild boar','Red squirrel'],         visiting:'Contact Highlands Rewilding before visiting — stalking seasons apply.' },
+  { id:12, name:'Beldorney Estate',         lat:57.38, lng:-2.95,  type:'meadow',   size:349,   country:'Scotland',    species:['Brown hare','Lapwing','Curlew','Field scabious'],                   visiting:'Contact Highlands Rewilding to arrange a visit.' },
+  { id:13, name:'Tayvallich',               lat:56.02, lng:-5.61,  type:'wetland',  size:800,   country:'Scotland',    species:['Otters','Marsh harrier','Native oak','Salt marsh plants'],          visiting:'Contact Highlands Rewilding before visiting.' },
+  // France
+  { id:14, name:'Forêt Sauvage Périgord',   lat:44.87, lng:0.92,   type:'woodland', size:780,   country:'France',      species:['European bison','Wild boar','Black woodpecker','Wild cat'],         visiting:'Guided walks available seasonally. Contact the estate.' },
+  { id:15, name:'Marais Poitevin',          lat:46.38, lng:-0.73,  type:'wetland',  size:900,   country:'France',      species:['White stork','Purple heron','European eel','Coypu'],               visiting:'Boat tours available April–October from Coulon.' },
+  { id:16, name:'Jardin Sauvage Paris',     lat:48.85, lng:2.35,   type:'garden',   size:0.03,  country:'France',      species:['Paris blue butterfly','Common toad','Ivy bee'],                    visiting:null },
+  // Germany
+  { id:17, name:'Oder Delta Rewilding',     lat:53.72, lng:14.22,  type:'wetland',  size:2100,  country:'Germany',     species:['White-tailed eagle','Eurasian beaver','Crane','Spoonbill'],        visiting:'Part of the Lower Oder Valley National Park. Open access.' },
+  { id:18, name:'Schwarzwald Wild Zone',    lat:48.22, lng:8.22,   type:'woodland', size:1200,  country:'Germany',     species:['Lynx','Black woodpecker','Wild cat','Capercaillie'],               visiting:'National Park trails open year-round.' },
+  { id:19, name:'Stadtgarten Berlin',       lat:52.52, lng:13.40,  type:'garden',   size:0.05,  country:'Germany',     species:['Common swift','Hedgehog','Buff-tailed bumblebee'],                 visiting:null },
+  // Netherlands
+  { id:20, name:'Oostvaardersplassen',      lat:52.45, lng:5.38,   type:'reserve',  size:5600,  country:'Netherlands', species:['Konik horse','Red deer','White-tailed eagle','Greylag goose'],    visiting:'Visitor centre at Almere. Guided tours available.' },
+  { id:21, name:'Millingerwaard',           lat:51.87, lng:5.97,   type:'meadow',   size:450,   country:'Netherlands', species:['Beaver','Kingfisher','Grass snake','Sand martin'],                 visiting:'Free public access. Floodplain site on the Waal.' },
+  // Spain
+  { id:22, name:'Iberian Wolf Project',     lat:40.96, lng:-5.66,  type:'reserve',  size:9800,  country:'Spain',       species:['Iberian wolf','Iberian lynx','Golden eagle','Red kite'],           visiting:'Guided wildlife tours available. Book in advance.' },
+  { id:23, name:'Humedal Doñana',           lat:37.03, lng:-6.40,  type:'wetland',  size:4200,  country:'Spain',       species:['Greater flamingo','Marbled duck','Purple gallinule'],              visiting:'National Park. Guided 4x4 tours run from El Rocío.' },
+  // Sweden
+  { id:24, name:'Söderåsen Wild Forest',    lat:56.10, lng:13.28,  type:'woodland', size:1600,  country:'Sweden',      species:['Lynx','Wolf','Hazel grouse','White-backed woodpecker'],            visiting:'National Park. Free access on marked trails.' },
+  // Poland
+  { id:25, name:'Białowieża Forest',        lat:52.70, lng:23.85,  type:'woodland', size:12000, country:'Poland',      species:['European bison','Wolf','Lynx','White-tailed eagle'],               visiting:'UNESCO site. Guided tours required in strict reserve zone.' },
+  { id:26, name:'Biebrza Marshes',          lat:53.41, lng:22.77,  type:'wetland',  size:5900,  country:'Poland',      species:['Aquatic warbler','European elk','Otter','Crane'],                  visiting:'National Park. Open access with waymarked routes.' },
+  // Italy
+  { id:27, name:'Alpi Marittime',           lat:44.25, lng:7.36,   type:'reserve',  size:6700,  country:'Italy',       species:['Wolf','Chamois','Ibex','Golden eagle'],                            visiting:'National Park. Visitor centre at Valdieri.' },
+
+  // Scottish Highlands — expanded
+  { id:28, name:'Cairngorms Connect',        lat:57.05, lng:-3.70,  type:'woodland', size:60000, country:'Scotland',    species:['Wildcat','Capercaillie','Red squirrel','Pine marten'],              visiting:'Part of Cairngorms National Park. Open access on trails.' },
+  { id:29, name:'Dundreggan Estate',         lat:57.22, lng:-4.72,  type:'woodland', size:4000,  country:'Scotland',    species:['Scots pine','Aspen','Red squirrel','Golden eagle'],                 visiting:'Trees for Life site. Volunteer weeks and visits available.' },
+  { id:30, name:'Glen Affric',               lat:57.25, lng:-4.98,  type:'woodland', size:18000, country:'Scotland',    species:['Caledonian pine','Otter','Red deer','Crossbill'],                  visiting:'Open access. Forestry Scotland car parks at Dog Falls.' },
+  { id:31, name:'Kinloch Woodlands',         lat:57.55, lng:-5.50,  type:'woodland', size:5600,  country:'Scotland',    species:['Native oak','Downy birch','Pine marten','Red deer'],               visiting:'Community-owned site near Shieldaig. Contact before visiting.' },
+  { id:32, name:'Tarras Valley Nature Reserve', lat:55.14, lng:-2.98, type:'meadow', size:4200,  country:'Scotland',    species:['Brown hare','Curlew','Lapwing','Black grouse'],                    visiting:'Community-owned. Open access on public paths.' },
+  { id:33, name:'Alladale Wilderness Reserve', lat:57.85, lng:-4.72, type:'reserve', size:9300,  country:'Scotland',    species:['Red deer','Golden eagle','Black grouse','Mountain hare'],          visiting:'Guided tours and lodge stays available. Book in advance.' },
+  { id:34, name:'Balmacaan Forest',          lat:57.25, lng:-4.45,  type:'woodland', size:1800,  country:'Scotland',    species:['Caledonian pine','Red squirrel','Roe deer','Crossbill'],           visiting:'Part of the Great Glen. Access via public rights of way.' },
+  { id:35, name:'Galloway Forest Dark Sky',  lat:55.07, lng:-4.40,  type:'woodland', size:7700,  country:'Scotland',    species:['Red kite','Otter','Red squirrel','Pine marten'],                   visiting:'Forest Park. Multiple trails and visitor centres.' },
+  { id:36, name:'Isle of Rum NNR',           lat:57.00, lng:-6.30,  type:'reserve',  size:10684, country:'Scotland',    species:['White-tailed eagle','Red deer','Manx shearwater','Otter'],         visiting:'Ferry from Mallaig. NatureScot managed. Wild camping allowed.' },
+  { id:37, name:'Abernethy Forest',          lat:57.25, lng:-3.65,  type:'woodland', size:5000,  country:'Scotland',    species:['Capercaillie','Crested tit','Scottish crossbill','Red squirrel'],  visiting:'RSPB reserve. Free access on waymarked trails.' },
+  { id:38, name:'Ballintean Mountain Lodge', lat:57.05, lng:-3.82,  type:'reserve',  size:800,   country:'Scotland',    species:['Pine marten','Red squirrel','Red grouse','Mountain hare'],         visiting:'Private estate open to guests. Rewilding Europe network member.' },
+
+  // More UK
+  { id:39, name:'Wicken Fen Vision',         lat:52.30, lng:0.29,   type:'wetland',  size:5300,  country:'England',     species:['Konik horse','Fen raft spider','Bittern','Marsh harrier'],         visiting:'National Trust. Visitor centre open daily.' },
+  { id:40, name:'Wild Ennerdale',            lat:54.53, lng:-3.38,  type:'woodland', size:4500,  country:'England',     species:['Red squirrel','Otter','Dipper','Native woodland'],                  visiting:'Open access. Lake District National Park.' },
+  { id:41, name:'Holkham Dunes',             lat:52.97, lng:0.82,   type:'meadow',   size:3900,  country:'England',     species:['Natterjack toad','Sand lizard','Little tern','Marsh orchid'],      visiting:'National Nature Reserve. Free beach access year-round.' },
+  { id:42, name:'Purbeck Heaths NNR',        lat:50.67, lng:-2.07,  type:'reserve',  size:1500,  country:'England',     species:['Sand lizard','Smooth snake','Dartford warbler','Nightjar'],        visiting:'RSPB and Natural England. Heathland trails open year-round.' },
+  { id:43, name:'Pumlumon Fawr',             lat:52.47, lng:-3.77,  type:'meadow',   size:4000,  country:'Wales',       species:['Red kite','Peat bog specialists','Merlin','Curlew'],               visiting:'Montgomeryshire Wildlife Trust site. Open access.' },
+  { id:44, name:'Cors Caron',               lat:52.25, lng:-3.92,  type:'wetland',  size:800,   country:'Wales',       species:['Red kite','Otter','Bog rosemary','White-faced darter'],            visiting:'National Nature Reserve. Boardwalk trail from Tregaron.' },
+  { id:45, name:'Glastonbury Tor Rewilding', lat:51.14, lng:-2.70,  type:'meadow',   size:120,   country:'England',     species:['Adder','Slow worm','Common blue butterfly','Meadow pipit'],       visiting:'National Trust managed. Open access year-round.' },
+  { id:46, name:'Nattergal Lincolnshire',    lat:53.25, lng:-0.15,  type:'meadow',   size:292,   country:'England',     species:['Barn owl','Brown hare','Yellowhammer','Common spotted orchid'],    visiting:'Nattergal rewilding project. Contact for visit arrangements.' },
+  { id:47, name:'Kielder Forest Rewilding',  lat:55.23, lng:-2.55,  type:'woodland', size:9000,  country:'England',     species:['Red squirrel','Osprey','Otter','Water vole'],                      visiting:'Forestry England. Multiple trails and visitor centres.' },
+
+  // More Europe
+  { id:48, name:'Rhodope Mountains',         lat:41.70, lng:24.50,  type:'reserve',  size:250000,country:'Bulgaria',    species:['European bison','Red deer','Griffon vulture','Brown bear'],        visiting:'Rewilding Europe area. Guided wildlife tours available.' },
+  { id:49, name:'Southern Carpathians',      lat:45.38, lng:22.87,  type:'woodland', size:100000,country:'Romania',     species:['Brown bear','Wolf','Lynx','European bison'],                       visiting:'Rewilding Europe area. Eco-tourism from local villages.' },
+  { id:50, name:'Danube Delta',              lat:45.10, lng:29.60,  type:'wetland',  size:580000,country:'Romania',     species:['Pelican','Wild horse','Water buffalo','White-tailed eagle'],       visiting:'UNESCO site. Boat tours from Tulcea year-round.' },
+  { id:51, name:'Velebit Mountains',         lat:44.80, lng:15.10,  type:'reserve',  size:200000,country:'Croatia',     species:['Brown bear','Wolf','Lynx','Golden eagle'],                         visiting:'Rewilding Europe area. Hiking trails in NP Sjeverni Velebit.' },
+  { id:52, name:'Greater Côa Valley',        lat:40.90, lng:-7.10,  type:'reserve',  size:120000,country:'Portugal',    species:['Feral horse','Iberian wolf','Black vulture','Otter'],              visiting:'Rewilding Europe area. Guided tours from Vila Nova de Foz Côa.' },
+  { id:53, name:'Iberian Highlands',         lat:40.55, lng:-1.95,  type:'reserve',  size:850000,country:'Spain',       species:['Egyptian vulture','Iberian ibex','Red deer','Roe deer'],           visiting:'Rewilding Spain project. Nature tourism from Cuenca.' },
+  { id:54, name:'Vindel River Rewilding',    lat:65.10, lng:17.20,  type:'wetland',  size:5500,  country:'Sweden',      species:['Brown trout','Otter','White-tailed eagle','Arctic grayling'],      visiting:'Rewilding Sweden project. Accessible via Storuman.' },
+  { id:55, name:'Lauwersmeer',               lat:53.35, lng:6.22,   type:'wetland',  size:2000,  country:'Netherlands', species:['Spoonbill','Avocet','Konik horse','Marsh harrier'],                visiting:'National Park. Visitor centre at Lauwersoog.' },
+  { id:56, name:'Maasduinen',                lat:51.55, lng:6.12,   type:'woodland', size:3800,  country:'Netherlands', species:['Sand lizard','Adder','Nightjar','Red squirrel'],                   visiting:'National Park. Free access on marked trails.' },
+  { id:57, name:'Drôme River Corridor',      lat:44.72, lng:5.20,   type:'wetland',  size:1200,  country:'France',      species:['Otter','Kingfisher','Beaver','Wild boar'],                         visiting:'Open access along river banks. Part of Vercors Regional Park.' },
+  { id:58, name:'Mercantour Rewilding',      lat:44.10, lng:7.00,   type:'reserve',  size:68500, country:'France',      species:['Wolf','Chamois','Ibex','Bearded vulture'],                         visiting:'National Park. Visitor centres at Saint-Martin-Vésubie.' },
+  { id:59, name:'Lüneburg Heath',            lat:53.10, lng:9.90,   type:'meadow',   size:23400, country:'Germany',     species:['Mouflons','Heath sheep','Nightjar','European turtle dove'],        visiting:'Nature Reserve. Free access. Best in August for heather bloom.' },
+  { id:60, name:'Lapland Rewilding Zone',    lat:68.50, lng:27.00,  type:'reserve',  size:500000,country:'Finland',     species:['Brown bear','Wolf','Wolverine','Reindeer'],                        visiting:'Urho Kekkonen National Park. Guided wilderness tours available.' },
+];
+
+// ── SHARED: MAP INIT ────────────────────────────────────────
+const map = L.map('map', { zoomControl: false }).setView([52, 8], 5);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> &copy; <a href="https://carto.com">CARTO</a>',
+  maxZoom: 18
+}).addTo(map);
+
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+// ── STORY 1: MARKERS + FILTER ───────────────────────────────
+// Acceptance criteria: sites on map, clickable detail, filter by type,
+// 20+ seed sites, handles no-visit state.
+let currentFilter = 'all';
+let markers       = [];
+let nearbyIds     = new Set(); // tracks which sites are "nearby" after search
+
+function makeMarker(site) {
+  const cfg    = TYPES[site.type] || TYPES.meadow;
+  const radius = site.size < 1 ? 6 : Math.min(22, Math.max(8, Math.sqrt(site.size) * 0.38));
+
+  const m = L.circleMarker([site.lat, site.lng], {
+    radius,
+    fillColor:   cfg.color,
+    color:       'white',
+    weight:      1.5,
+    opacity:     0.9,
+    fillOpacity: 0.78,
+  }).addTo(map);
+
+  m.siteId       = site.id;
+  m.siteType     = site.type;
+  m.baseRadius   = radius;
+  m.baseColor    = cfg.color;
+
+  m.bindPopup('', { maxWidth: 210, closeButton: false });
+  m.on('click', () => {
+    const isNearby = nearbyIds.has(site.id);
+    m.setPopupContent(`
+      <div class="lp-name">${site.name}</div>
+      <div class="lp-meta">${cfg.icon} ${cfg.label} &nbsp;·&nbsp; ${site.country}</div>
+      ${isNearby ? '<div class="lp-nearby">📍 Near your search</div>' : ''}
+      <button class="lp-open" onclick="openPanel(${site.id})">View details →</button>
+    `);
+    m.openPopup();
+  });
+
+  markers.push(m);
+}
+
+SITES.forEach(makeMarker);
+
+// ── STORY 1: FILTER ─────────────────────────────────────────
+function setFilter(type, btn) {
+  currentFilter = type;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  let visible = 0;
+  markers.forEach(m => {
+    const show = (type === 'all' || m.siteType === type);
+    if (show) { map.addLayer(m);    visible++; }
+    else       { map.removeLayer(m); m.closePopup(); }
+  });
+
+  document.getElementById('emptyState').classList.toggle('show', visible === 0);
+  updateCount();
+
+  if (currentSiteId !== null) {
+    const site = SITES.find(s => s.id === currentSiteId);
+    if (site && type !== 'all' && site.type !== type) closePanel();
+  }
+}
+
+function updateCount() {
+  const bounds = map.getBounds();
+  let visible = 0;
+  markers.forEach(m => {
+    if (map.hasLayer(m) && bounds.contains(m.getLatLng())) visible++;
+  });
+  document.getElementById('visible-count').textContent = visible;
+  const mel = document.getElementById('mobileVisibleCount');
+  if (mel) mel.textContent = visible;
+}
+
+map.on('moveend', updateCount);
+map.on('zoomend', updateCount);
+
+// ── STORY 1: DETAIL PANEL ───────────────────────────────────
+let currentSiteId = null;
+
+function openPanel(id) {
+  const site = SITES.find(s => s.id === id);
+  if (!site) return;
+  currentSiteId = id;
+
+  const cfg = TYPES[site.type] || TYPES.meadow;
+  document.getElementById('panelEyebrow').textContent = `${site.country} · ${cfg.label}`;
+  document.getElementById('panelTitle').textContent   = site.name;
+
+  const sizeLabel = site.size < 1
+    ? `${Math.round(site.size * 10000)} m²`
+    : `${site.size.toLocaleString()} hectares`;
+
+  const speciesTags = site.species.map(s => `<span class="species-tag">${s}</span>`).join('');
+
+  const visitHtml = site.visiting
+    ? `<div class="visit-box"><strong>Visiting</strong>${site.visiting}</div>`
+    : `<div class="visit-box no-visit"><strong>Visiting</strong>This site isn't currently listed for public visits. To find out more or arrange access, contact us and we'll connect you with the site owner.</div>`;
+
+  document.getElementById('panelBody').innerHTML = `
+    <div class="detail-row">
+      <span class="detail-icon">${cfg.icon}</span>
+      <div>
+        <div class="detail-label">Habitat type</div>
+        <div class="detail-value">
+          <span class="type-badge" style="background:${cfg.color}18;color:${cfg.color};border:1px solid ${cfg.color}30;">${cfg.label}</span>
+        </div>
+      </div>
+    </div>
+    <div class="detail-row">
+      <span class="detail-icon">📐</span>
+      <div><div class="detail-label">Approximate size</div><div class="detail-value">${sizeLabel}</div></div>
+    </div>
+    <div class="detail-row">
+      <span class="detail-icon">📍</span>
+      <div><div class="detail-label">Location</div><div class="detail-value">${site.country}</div></div>
+    </div>
+    <div class="divider"></div>
+    <div class="detail-row">
+      <span class="detail-icon">🦋</span>
+      <div><div class="detail-label">Notable species</div><div class="species-tags">${speciesTags}</div></div>
+    </div>
+    ${visitHtml}
+  `;
+
+  document.getElementById('detailPanel').classList.add('open');
+  map.closePopup();
+}
+
+function closePanel() {
+  document.getElementById('detailPanel').classList.remove('open');
+  currentSiteId = null;
+}
+
+map.on('click', closePanel);
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closePanel(); map.closePopup(); clearSearch(); }
+});
+
+// ── STORY 2: POSTCODE SEARCH + CORRIDORS ────────────────────
+// Acceptance criteria: enter postcode → map centres on nearby sites,
+// nearby sites highlighted, corridor lines drawn between them,
+// plain-language explanation shown, no-results state, invalid input handled.
+
+const SEARCH_RADIUS_KM = 80;
+let corridorLines = [];
+let searchCircle  = null;
+let userMarker    = null;
+
+// Haversine distance between two lat/lng points in km
+function distKm(lat1, lng1, lat2, lng2) {
+  const R   = 6371;
+  const dLa = (lat2 - lat1) * Math.PI / 180;
+  const dLo = (lng2 - lng1) * Math.PI / 180;
+  const a   = Math.sin(dLa/2)**2 +
+              Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLo/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function onSearchInput() {
+  const val = document.getElementById('postcodeInput').value.trim();
+  document.getElementById('searchClear').classList.toggle('show', val.length > 0);
+  if (!val) hideSearchError();
+}
+
+function showSearchError(msg) {
+  const el = document.getElementById('searchError');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 4000);
+}
+
+function hideSearchError() {
+  document.getElementById('searchError').classList.remove('show');
+}
+
+async function runSearch() {
+  const raw = document.getElementById('postcodeInput').value.trim();
+  if (!raw) { showSearchError('Please enter a postcode or town name.'); return; }
+
+  // ── Validate before calling any API ─────────────────────
+  // UK postcode pattern: outward code + at least first digit of inward
+  // e.g. "EH1 1" or "BN11A" — rejects bare outward codes like "EH1"
+  const ukPartial = /^[A-Z]{1,2}\d[A-Z\d]?\s*\d/i;
+  // Place name: at least 3 characters
+  const placeName = raw.length >= 3;
+
+  if (!ukPartial.test(raw) && !placeName) {
+    showSearchError('Please enter a full postcode (e.g. EH1 1YZ) or a town name.');
+    return;
+  }
+
+  hideSearchError();
+  clearCorridors();
+  nearbyIds.clear();
+  document.getElementById('nearbyEmpty').classList.remove('show');
+
+  // Reset marker styles
+  markers.forEach(m => {
+    m.setStyle({ fillColor: m.baseColor, color: 'white', weight: 1.5, fillOpacity: 0.78, opacity: 0.9 });
+    m.setRadius(m.baseRadius);
+  });
+
+  // ── Geocode ─────────────────────────────────────────────
+  let lat, lng;
+  try {
+    // Try UK postcode API first — only if input looks like a postcode
+    if (ukPartial.test(raw)) {
+      const ukClean = raw.replace(/\s/g, '').toUpperCase();
+      const ukRes   = await fetch(`https://api.postcodes.io/postcodes/${ukClean}`);
+      if (ukRes.ok) {
+        const ukData = await ukRes.json();
+        if (ukData.status === 200) {
+          lat = ukData.result.latitude;
+          lng = ukData.result.longitude;
+        }
+      }
+      // 404 from postcodes.io = postcode not found, fall through to Nominatim silently
+    }
+    // Fallback: Nominatim for European addresses / partial UK
+    if (lat === undefined) {
+      const nomRes  = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(raw)}&format=json&limit=1&countrycodes=gb,fr,de,nl,es,se,pl,it,be,dk,no,ch,at`,
+        { headers: { 'Accept-Language': 'en' } }
+      );
+      if (nomRes.ok) {
+        const nomData = await nomRes.json();
+        if (nomData.length > 0) {
+          lat = parseFloat(nomData[0].lat);
+          lng = parseFloat(nomData[0].lon);
+        }
+      }
+    }
+  } catch(e) {
+    showSearchError('Could not reach location service. Check your connection and try again.');
+    return;
+  }
+
+  if (lat === undefined) {
+    showSearchError(`"${raw}" wasn't recognised. Try a full postcode (e.g. BN1 1AA) or a town name.`);
+    return;
+  }
+
+  // ── Find nearby sites ────────────────────────────────────
+  const nearby = SITES.filter(s => distKm(lat, lng, s.lat, s.lng) <= SEARCH_RADIUS_KM);
+  nearbyIds    = new Set(nearby.map(s => s.id));
+
+  // ── Draw user location marker ────────────────────────────
+  if (userMarker) map.removeLayer(userMarker);
+  userMarker = L.circleMarker([lat, lng], {
+    radius: 7, fillColor: '#ffffff', color: '#2d4a2d', weight: 3, fillOpacity: 1, opacity: 1
+  }).addTo(map).bindTooltip('Your location', { permanent: false });
+
+  // ── Highlight nearby markers ─────────────────────────────
+  markers.forEach(m => {
+    if (nearbyIds.has(m.siteId)) {
+      m.setStyle({ color: '#f0a500', weight: 3, fillOpacity: 0.92 });
+      m.setRadius(Math.max(m.baseRadius, 10));
+    } else {
+      m.setStyle({ fillOpacity: 0.25, opacity: 0.4 });
+    }
+  });
+
+  // ── Handle no nearby sites ───────────────────────────────
+  if (nearby.length === 0) {
+    map.setView([lat, lng], 9);
+    document.getElementById('nearbyEmpty').classList.add('show');
+    return;
+  }
+
+  // ── Fit map to show user + nearby sites ──────────────────
+  const latlngs = [[lat, lng], ...nearby.map(s => [s.lat, s.lng])];
+  map.fitBounds(L.latLngBounds(latlngs).pad(0.25));
+
+  // ── Draw corridor lines between nearby sites ─────────────
+  if (nearby.length >= 2) {
+    // Connect sites in a logical chain (nearest-neighbour order)
+    const ordered  = orderByProximity(nearby);
+    for (let i = 0; i < ordered.length - 1; i++) {
+      const a = ordered[i];
+      const b = ordered[i + 1];
+      const line = L.polyline([[a.lat, a.lng],[b.lat, b.lng]], {
+        color:     '#f0a500',
+        weight:    2.5,
+        opacity:   0.65,
+        dashArray: '6 6',
+      }).addTo(map);
+      corridorLines.push(line);
+    }
+    showCorridorPanel(nearby, ordered);
+    document.getElementById('legendCorridor').style.display = 'flex';
+  } else {
+    // Single nearby site — show corridor panel with encouraging message
+    showCorridorPanel(nearby, nearby);
+  }
+}
+
+// Order sites by nearest-neighbour chain (greedy) so corridor lines don't criss-cross
+function orderByProximity(sites) {
+  if (sites.length <= 2) return [...sites];
+  const remaining = [...sites];
+  const ordered   = [remaining.splice(0, 1)[0]];
+  while (remaining.length > 0) {
+    const last = ordered[ordered.length - 1];
+    let nearestIdx = 0;
+    let nearestDist = Infinity;
+    remaining.forEach((s, i) => {
+      const d = distKm(last.lat, last.lng, s.lat, s.lng);
+      if (d < nearestDist) { nearestDist = d; nearestIdx = i; }
+    });
+    ordered.push(remaining.splice(nearestIdx, 1)[0]);
+  }
+  return ordered;
+}
+
+function showCorridorPanel(nearby, ordered) {
+  const panel = document.getElementById('corridorPanel');
+  const body  = document.getElementById('corridorBody');
+  const sites = document.getElementById('corridorSites');
+
+  if (nearby.length === 1) {
+    body.innerHTML = `There is <strong style="color:#f0a500">1 rewilded site</strong> within ${SEARCH_RADIUS_KM}km of your location. A wildlife corridor needs at least two connected sites — your garden could help link this site to others, giving wildlife a path to travel through.`;
+  } else {
+    body.innerHTML = `There are <strong style="color:#f0a500">${nearby.length} rewilded sites</strong> within ${SEARCH_RADIUS_KM}km of your location. The dotted lines show potential <strong>wildlife corridors</strong> — connected patches of habitat that allow birds, insects, and mammals to move safely through the landscape. Your garden can strengthen these connections.`;
+  }
+
+  sites.innerHTML = ordered.map(s => {
+    const cfg = TYPES[s.type] || TYPES.meadow;
+    return `<div class="corridor-site-item">
+      <span class="corridor-dot" style="background:${cfg.color}"></span>
+      ${s.name}
+    </div>`;
+  }).join('');
+
+  panel.classList.add('show');
+}
+
+function clearCorridors() {
+  corridorLines.forEach(l => map.removeLayer(l));
+  corridorLines = [];
+  if (userMarker) { map.removeLayer(userMarker); userMarker = null; }
+  document.getElementById('corridorPanel').classList.remove('show');
+  document.getElementById('legendCorridor').style.display = 'none';
+  document.getElementById('nearbyEmpty').classList.remove('show');
+  markers.forEach(m => {
+    m.setStyle({ fillColor: m.baseColor, color: 'white', weight: 1.5, fillOpacity: 0.78, opacity: 0.9 });
+    m.setRadius(m.baseRadius);
+  });
+  nearbyIds.clear();
+}
+
+function clearSearch() {
+  document.getElementById('postcodeInput').value = '';
+  document.getElementById('searchClear').classList.remove('show');
+  hideSearchError();
+  clearCorridors();
+  map.setView([52, 8], 5);
+  closePanel();
+}
+
+// ── STORY 3: MOCK PLANS (used when API key unavailable) ──────
+// Realistic regional plans seeded by postcode prefix.
+// These are removed and replaced by live AI calls in Phase 3.
+const MOCK_PLANS = {
+  southern_uk: {
+    location_description: "The South Downs and Sussex coastal plain support a rich mix of chalk grassland, hedgerow, and woodland species — ideal conditions for pollinators and ground-nesting birds.",
+    seasons: {
+      autumn: [
+        { common_name:"Field Maple", latin_name:"Acer campestre", type:"tree", reason:"Native to the Sussex chalk downs, field maple provides autumn colour and dense branching perfect for nesting birds in the South East.", wildlife:"Bullfinch, Comma butterfly, Treecreeper", nursery:{ name:"Trees Direct", url:"https://www.treesdirect.co.uk/products/field-maple", note:"Native trees, bare root and pot grown" } },
+        { common_name:"Spindle", latin_name:"Euonymus europaeus", type:"shrub", reason:"Thrives on the alkaline soils of the South Downs, its vivid pink and orange berries are a critical autumn food source in this region.", wildlife:"Robin, Blackbird, Orange-tip butterfly larvae", nursery:{ name:"Hedgerow Rose", url:"https://www.hedgerowrose.co.uk", note:"Native hedgerow shrubs for southern England" } },
+        { common_name:"Wild Marjoram", latin_name:"Origanum vulgare", type:"ground", reason:"A chalk grassland native ideally suited to well-drained Sussex soils, it extends the foraging season for pollinators well into autumn.", wildlife:"Common blue butterfly, Six-spot burnet moth, Buff-tailed bumblebee", nursery:{ name:"Habitat Aid", url:"https://www.habitataid.co.uk/collections/plug-plants", note:"Native wildflower plugs, UK grown" } },
+      ],
+      winter: [
+        { common_name:"Hazel", latin_name:"Corylus avellana", type:"shrub", reason:"A cornerstone of Sussex hedgerows, hazel catkins provide the first pollen of the year for queen bumblebees emerging in late winter.", wildlife:"Dormouse, Great tit, Long-tailed tit", nursery:{ name:"Trees Direct", url:"https://www.treesdirect.co.uk/products/hazel", note:"Native trees, bare root and pot grown" } },
+        { common_name:"Holly", latin_name:"Ilex aquifolium", type:"tree", reason:"Widespread across the South East, holly berries are a critical winter food source when other fruits have gone.", wildlife:"Mistle thrush, Holly blue butterfly, Redwing", nursery:{ name:"Hedgerow Rose", url:"https://www.hedgerowrose.co.uk", note:"Native hedgerow shrubs for southern England" } },
+      ],
+      spring: [
+        { common_name:"Bluebell", latin_name:"Hyacinthoides non-scripta", type:"ground", reason:"The native bluebell thrives beneath deciduous canopy across Sussex woodland edges, providing an early nectar source before most other plants flower.", wildlife:"Brimstone butterfly, Early bumblebee, Chiffchaff", nursery:{ name:"British Wildflower Plants", url:"https://www.wildflowerplants.com/bluebells", note:"Native bulbs and plugs, not Spanish hybrid" } },
+        { common_name:"Blackthorn", latin_name:"Prunus spinosa", type:"shrub", reason:"One of the first shrubs to flower in Sussex hedgerows, blackthorn blossom is invaluable for early emerging pollinators in March and April.", wildlife:"Brown hairstreak butterfly, Blackcap warbler, Hedgehog", nursery:{ name:"Hedgerow Rose", url:"https://www.hedgerowrose.co.uk", note:"Native hedgerow shrubs for southern England" } },
+        { common_name:"Primrose", latin_name:"Primula vulgaris", type:"ground", reason:"A native of Sussex woodland margins and banks, primrose provides nectar when little else is available and is a larval plant for the Duke of Burgundy butterfly.", wildlife:"Duke of Burgundy butterfly, Early bee, Brimstone butterfly", nursery:{ name:"Habitat Aid", url:"https://www.habitataid.co.uk/collections/plug-plants", note:"Native wildflower plugs, UK grown" } },
+      ],
+      summer: [
+        { common_name:"Oxeye Daisy", latin_name:"Leucanthemum vulgare", type:"ground", reason:"A classic chalk grassland plant of the South Downs, it naturalises readily in lawns and borders and blooms prolifically through June and July.", wildlife:"Marbled white butterfly, Common carder bee, Meadow brown butterfly", nursery:{ name:"Naturescape", url:"https://www.naturescape.co.uk/product-category/wildflower-plants", note:"Native wildflower plants and seeds" } },
+        { common_name:"Honeysuckle", latin_name:"Lonicera periclymenum", type:"climber", reason:"Native to Sussex hedgerows and woodland edges, honeysuckle flowers attract hawk-moths on warm evenings and its berries feed warblers in late summer.", wildlife:"Hummingbird hawk-moth, Garden warbler, White admiral butterfly", nursery:{ name:"British Wildflower Plants", url:"https://www.wildflowerplants.com", note:"Native climbing and hedgerow plants" } },
+        { common_name:"Yarrow", latin_name:"Achillea millefolium", type:"ground", reason:"Drought-tolerant and well-suited to the free-draining chalk soils of the South East, yarrow flowers from June to October and is highly attractive to hoverflies.", wildlife:"Thick-legged flower beetle, Common hoverfly, Painted lady butterfly", nursery:{ name:"Chiltern Seeds", url:"https://www.chilternseeds.co.uk/product/achillea-millefolium", note:"Native wildflower seeds, UK supplier" } },
+      ],
+    }
+  },
+  northern_uk: {
+    location_description: "The Scottish Lowlands and upland fringes support acid grassland, moorland scrub, and riparian woodland — a landscape where native planting can directly connect with some of Europe's most ambitious rewilding projects.",
+    seasons: {
+      autumn: [
+        { common_name:"Rowan", latin_name:"Sorbus aucuparia", type:"tree", reason:"One of the most important native trees in Scottish upland landscapes, rowan berries are a critical autumn food source and the tree tolerates the cool, wet conditions of central Scotland well.", wildlife:"Redwing, Fieldfare, Red grouse, Pine marten", nursery:{ name:"Trees Direct", url:"https://www.treesdirect.co.uk/products/rowan", note:"Native trees, bare root and pot grown" } },
+        { common_name:"Guelder Rose", latin_name:"Viburnum opulus", type:"shrub", reason:"Native to Scottish riparian edges and damp woodland, its heavy berry clusters persist well into winter providing food when other sources are depleted.", wildlife:"Bullfinch, Waxwing, Song thrush", nursery:{ name:"Celtic Wild Flowers", url:"https://celticwildflowers.co.uk", note:"Native plants for Scotland and Wales" } },
+        { common_name:"Devil's Bit Scabious", latin_name:"Succisa pratensis", type:"ground", reason:"The primary larval foodplant of the marsh fritillary butterfly, this is a key species for wet meadow habitats across central Scotland.", wildlife:"Marsh fritillary butterfly, Common carder bee, Garden bumblebee", nursery:{ name:"Habitat Aid", url:"https://www.habitataid.co.uk/collections/plug-plants", note:"Native wildflower plugs, UK grown" } },
+      ],
+      winter: [
+        { common_name:"Downy Birch", latin_name:"Betula pubescens", type:"tree", reason:"Better adapted to the wetter, cooler conditions of Scotland than silver birch, downy birch provides winter seed and bark habitat for specialist insects.", wildlife:"Redpoll, Siskin, Birch sawfly", nursery:{ name:"Trees Direct", url:"https://www.treesdirect.co.uk", note:"Native trees, bare root and pot grown" } },
+        { common_name:"Dog Rose", latin_name:"Rosa canina", type:"shrub", reason:"The persistent hips of dog rose provide a vital winter food source in Scottish hedgerows when temperatures drop and other berries have gone.", wildlife:"Fieldfare, Redwing, Long-tailed tit", nursery:{ name:"Hedgerow Rose", url:"https://www.hedgerowrose.co.uk", note:"Native roses and hedgerow shrubs" } },
+      ],
+      spring: [
+        { common_name:"Wood Anemone", latin_name:"Anemone nemorosa", type:"ground", reason:"An ancient woodland indicator species widespread across Scottish oakwood, wood anemone spreads slowly but reliably and signals genuine ecological restoration.", wildlife:"Buff-tailed bumblebee, Peacock butterfly, Wood mouse", nursery:{ name:"British Wildflower Plants", url:"https://www.wildflowerplants.com", note:"Native woodland floor species" } },
+        { common_name:"Crab Apple", latin_name:"Malus sylvestris", type:"tree", reason:"Native to Scottish woodland edges, crab apple blossom provides abundant spring nectar and the fruit persists into deep winter — particularly valuable in upland areas.", wildlife:"Brambling, Hawfinch, Common dormouse", nursery:{ name:"Trees Direct", url:"https://www.treesdirect.co.uk", note:"Native trees, bare root and pot grown" } },
+        { common_name:"Marsh Marigold", latin_name:"Caltha palustris", type:"ground", reason:"For wetter garden areas or pond margins, marsh marigold is a spectacular native Scottish wetland plant that flowers early when few other nectar sources exist.", wildlife:"Marsh fly, Early mining bee, Mallard", nursery:null },
+      ],
+      summer: [
+        { common_name:"Meadow Cranesbill", latin_name:"Geranium pratense", type:"ground", reason:"Native to Scottish roadsides and meadows, this robust perennial produces striking blue flowers from June to August and tolerates a range of soil types.", wildlife:"Common blue butterfly, Garden bumblebee, White-tailed bumblebee", nursery:{ name:"Naturescape", url:"https://www.naturescape.co.uk/product-category/wildflower-plants", note:"Native wildflower plants and seeds" } },
+        { common_name:"Tufted Vetch", latin_name:"Vicia cracca", type:"climber", reason:"A vigorous native climber found scrambling through Scottish hedgerows, tufted vetch fixes nitrogen and provides dense cover and nectar through midsummer.", wildlife:"Common blue butterfly, Bumblebees, Whitethroat", nursery:{ name:"Chiltern Seeds", url:"https://www.chilternseeds.co.uk", note:"Native wildflower seeds, UK supplier" } },
+        { common_name:"Ragged Robin", latin_name:"Lychnis flos-cuculi", type:"ground", reason:"A classic Scottish damp meadow plant, ragged robin thrives in wetter garden conditions and its distinctive pink flowers attract long-tongued bumblebees through July.", wildlife:"Garden bumblebee, Bee fly, Cuckoo bumblebee", nursery:{ name:"Habitat Aid", url:"https://www.habitataid.co.uk/collections/plug-plants", note:"Native wildflower plugs, UK grown" } },
+      ],
+    }
+  },
+  european: {
+    location_description: "Central European gardens sit at the intersection of Atlantic and Continental climate influences, supporting a diverse range of native woodland edge, meadow, and hedgerow species.",
+    seasons: {
+      autumn: [
+        { common_name:"Wild Cherry", latin_name:"Prunus avium", type:"tree", reason:"Native across central Europe, wild cherry provides spectacular autumn colour, abundant blossom in spring, and cherries that support over 30 species of moth and butterfly larvae.", wildlife:"Hawfinch, Common blackbird, Purple hairstreak butterfly", nursery:{ name:"Trees Direct", url:"https://www.treesdirect.co.uk", note:"Ships to most of Europe" } },
+        { common_name:"Elder", latin_name:"Sambucus nigra", type:"shrub", reason:"One of the most wildlife-productive native shrubs in central Europe, elder berries in autumn are eaten by over 30 species of bird and its flowers support hundreds of insect species.", wildlife:"Blackcap, Garden warbler, Elder moth", nursery:{ name:"Chiltern Seeds", url:"https://www.chilternseeds.co.uk", note:"Native wildflower seeds, ships to Europe" } },
+        { common_name:"Autumn Gentian", latin_name:"Gentianella amarella", type:"ground", reason:"A native of calcareous grassland across central Europe, autumn gentian provides late-season nectar when most other flowers have finished.", wildlife:"Clouded yellow butterfly, Small copper butterfly, Bumble bees", nursery:null },
+      ],
+      winter: [
+        { common_name:"Yew", latin_name:"Taxus baccata", type:"tree", reason:"A long-lived native of European limestone country, yew berries are critical winter food for thrushes and waxwings, and its dense evergreen structure provides year-round shelter.", wildlife:"Mistle thrush, Waxwing, Gold crest", nursery:{ name:"Trees Direct", url:"https://www.treesdirect.co.uk", note:"Native trees, ships to most of Europe" } },
+        { common_name:"Wayfaring Tree", latin_name:"Viburnum lantana", type:"shrub", reason:"Native to the limestone country of central Europe, wayfaring tree berries persist well into winter providing food for birds when other sources have gone.", wildlife:"Blackbird, Song thrush, Bullfinch", nursery:{ name:"Hedgerow Rose", url:"https://www.hedgerowrose.co.uk", note:"Native hedgerow shrubs" } },
+      ],
+      spring: [
+        { common_name:"Wild Garlic", latin_name:"Allium ursinum", type:"ground", reason:"A native of damp central European woodland, wild garlic carpets the ground in spring and provides nectar before the woodland canopy closes over.", wildlife:"Brimstone butterfly, Early bumblebee, Wood pigeon", nursery:{ name:"British Wildflower Plants", url:"https://www.wildflowerplants.com", note:"Native bulbs and woodland plants" } },
+        { common_name:"Hawthorn", latin_name:"Crataegus monogyna", type:"shrub", reason:"The most wildlife-valuable native hedgerow shrub in Europe — its blossom supports over 150 insect species and its berries feed birds through autumn and winter.", wildlife:"Song thrush, Redwing, Brown hairstreak butterfly", nursery:{ name:"Hedgerow Rose", url:"https://www.hedgerowrose.co.uk", note:"Native hedgerow shrubs" } },
+        { common_name:"Lesser Celandine", latin_name:"Ficaria verna", type:"ground", reason:"One of the earliest native European spring flowers, providing a critical nectar source for queen bumblebees and early butterflies in March.", wildlife:"Early bumblebee, Small tortoiseshell butterfly, Pipistrelle bat", nursery:{ name:"Habitat Aid", url:"https://www.habitataid.co.uk/collections/plug-plants", note:"Native wildflower plugs" } },
+      ],
+      summer: [
+        { common_name:"Meadow Clary", latin_name:"Salvia pratensis", type:"ground", reason:"A native of dry European meadows, meadow clary produces tall spikes of vivid blue flowers through June and July, highly attractive to specialist bumblebee species.", wildlife:"Shrill carder bee, Great yellow bumblebee, Painted lady butterfly", nursery:{ name:"Naturescape", url:"https://www.naturescape.co.uk/product-category/wildflower-plants", note:"Native wildflower plants and seeds" } },
+        { common_name:"Traveller's Joy", latin_name:"Clematis vitalba", type:"climber", reason:"The only native clematis in central Europe, traveller's joy provides dense summer cover for nesting birds and its fluffy seed heads persist through winter.", wildlife:"Whitethroat, Blackcap, Small emerald moth", nursery:{ name:"British Wildflower Plants", url:"https://www.wildflowerplants.com", note:"Native climbing plants" } },
+        { common_name:"Field Scabious", latin_name:"Knautia arvensis", type:"ground", reason:"A native of dry European grassland, field scabious flowers from June to October providing a long season of nectar for specialist butterflies and bumblebees.", wildlife:"Marsh fritillary butterfly, Brown argus butterfly, Shrill carder bee", nursery:{ name:"Chiltern Seeds", url:"https://www.chilternseeds.co.uk", note:"Native wildflower seeds, ships to Europe" } },
+      ],
+    }
+  }
+};
+
+function getMockPlan(postcode) {
+  const pc = postcode.toUpperCase().replace(/\s/g, '');
+  // Northern UK postcodes
+  const northern = ['EH','G','KY','PH','FK','DD','AB','IV','KW','HS','ZE','TD','DG','ML','KA','PA','DG'];
+  const prefix   = pc.match(/^[A-Z]+/)?.[0] || '';
+  if (northern.includes(prefix)) return MOCK_PLANS.northern_uk;
+  // UK postcodes (anything with recognisable UK prefix)
+  const ukPrefixes = ['BN','RH','TN','CT','ME','DA','SE','SW','W','NW','N','E','EC','WC','BR','CR','SM','KT','TW','UB','HA','WD','EN','IG','RM','SS','CM','CO','IP','NR','PE','NG','LE','CV','B','WS','WV','DY','ST','TF','SY','HR','GL','BS','BA','SP','SO','PO','GU','SL','RG','OX','HP','MK','LU','AL','SG','CB','NN','MK','TS','DH','SR','NE','CA','LA','PR','FY','BB','BL','OL','SK','CH','WA','WN','M','L','HU','YO','LS','BD','HX','HD','WF','DN','S','DE','LN','SR'];
+  if (ukPrefixes.includes(prefix)) return MOCK_PLANS.southern_uk;
+  return MOCK_PLANS.european;
+}
+// Acceptance criteria: postcode + size + garden type + goals →
+// seasonal plan with native plants, type badges, AI error handled,
+// retry available, form state preserved on back.
+
+const GARDEN_TYPES = ['Lawn','Patio / paved','Mixed borders','Overgrown / neglected','New build / bare soil','Woodland edge','Other'];
+const HABITAT_GOALS = [
+  { id:'pollinators', label:'🐝 Pollinators' },
+  { id:'birds',       label:'🐦 Birds' },
+  { id:'mammals',     label:'🦔 Mammals' },
+  { id:'wetland',     label:'💧 Wetland / pond' },
+  { id:'meadow',      label:'🌸 Wildflower meadow' },
+  { id:'woodland',    label:'🌳 Woodland feel' },
+];
+const SEASONS = [
+  { key:'autumn', label:'Autumn', icon:'🍂' },
+  { key:'winter', label:'Winter', icon:'❄️' },
+  { key:'spring', label:'Spring', icon:'🌱' },
+  { key:'summer', label:'Summer', icon:'☀️' },
+];
+const TYPE_BADGE = {
+  tree:    { cls:'badge-tree',    label:'Tree' },
+  shrub:   { cls:'badge-shrub',   label:'Shrub' },
+  ground:  { cls:'badge-ground',  label:'Ground cover' },
+  climber: { cls:'badge-climber', label:'Climber' },
+};
+
+// Preserve form state so user can go back without losing inputs
+let planFormState = { postcode:'', size:'', gardenType:'', goals:[] };
+let lastPlanResult = null;
+
+function openPlanDrawer() {
+  document.getElementById('planDrawer').classList.add('open');
+  // If we have a previous plan, show it; otherwise show the form
+  if (lastPlanResult) {
+    renderPlan(lastPlanResult, planFormState);
+  } else {
+    renderForm();
+  }
+}
+
+function closePlanDrawer() {
+  document.getElementById('planDrawer').classList.remove('open');
+}
+
+function renderForm(prefill = planFormState) {
+  document.getElementById('drawerTitle').textContent = "You're-wild";
+  const selectedGoals = new Set(prefill.goals);
+
+  document.getElementById('drawerBody').innerHTML = `
+    <p style="font-size:0.83rem;color:var(--soil);line-height:1.6;margin-bottom:1.25rem;">
+      Tell us a little about your garden and we'll create a personalised seasonal planting plan using native species suited to your area.
+    </p>
+
+    <div class="form-group">
+      <label class="form-label" for="planPostcode">Your postcode *</label>
+      <input class="form-input" id="planPostcode" type="text"
+        placeholder="e.g. BN1 1AA or EH1 1YZ"
+        maxlength="10" autocomplete="off" autocorrect="off" spellcheck="false"
+        value="${prefill.postcode}"/>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="planSize">Approximate garden size</label>
+      <select class="form-select" id="planSize">
+        <option value="" ${!prefill.size?'selected':''}>Select size…</option>
+        <option value="small (under 25m²)"         ${prefill.size==='small (under 25m²)'?'selected':''}>Small — under 25m²</option>
+        <option value="medium (25–100m²)"           ${prefill.size==='medium (25–100m²)'?'selected':''}>Medium — 25–100m²</option>
+        <option value="large (100–500m²)"           ${prefill.size==='large (100–500m²)'?'selected':''}>Large — 100–500m²</option>
+        <option value="very large (over 500m²)"     ${prefill.size==='very large (over 500m²)'?'selected':''}>Very large — over 500m²</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="planGardenType">Current garden type</label>
+      <select class="form-select" id="planGardenType">
+        <option value="" ${!prefill.gardenType?'selected':''}>Select type…</option>
+        ${GARDEN_TYPES.map(t => `<option value="${t}" ${prefill.gardenType===t?'selected':''}>${t}</option>`).join('')}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Habitat goals <span class="goals-hint" id="goalsHint">Choose up to 3</span></label>
+      <div class="goals-grid" id="goalsGrid">
+        ${HABITAT_GOALS.map(g => `
+          <button type="button" class="goal-chip ${selectedGoals.has(g.id)?'selected':''}"
+            data-goal="${g.id}" onclick="toggleGoal(this)">${g.label}</button>
+        `).join('')}
+      </div>
+    </div>
+
+    <button class="generate-btn" onclick="generatePlan()">
+      Generate my planting plan ✨
+    </button>
+  `;
+}
+
+function toggleGoal(btn) {
+  const selected = document.querySelectorAll('.goal-chip.selected');
+  if (!btn.classList.contains('selected') && selected.length >= 3) return;
+  btn.classList.toggle('selected');
+  updateGoalChipStates();
+}
+
+function updateGoalChipStates() {
+  const selected = document.querySelectorAll('.goal-chip.selected');
+  const hint     = document.getElementById('goalsHint');
+  const atLimit  = selected.length >= 3;
+  document.querySelectorAll('.goal-chip').forEach(c => {
+    if (!c.classList.contains('selected')) {
+      c.disabled = atLimit;
+      c.style.opacity = atLimit ? '0.35' : '1';
+      c.style.cursor  = atLimit ? 'not-allowed' : 'pointer';
+    } else {
+      c.disabled = false;
+      c.style.opacity = '1';
+      c.style.cursor  = 'pointer';
+    }
+  });
+  if (hint) {
+    hint.textContent  = atLimit ? 'Maximum reached — deselect one to change' : 'Choose up to 3';
+    hint.style.color  = atLimit ? 'var(--gold)' : 'var(--soil)';
+    hint.style.fontWeight = atLimit ? '700' : '400';
+  }
+}
+
+function saveFormState() {
+  planFormState = {
+    postcode:    document.getElementById('planPostcode')?.value.trim() || '',
+    size:        document.getElementById('planSize')?.value || '',
+    gardenType:  document.getElementById('planGardenType')?.value || '',
+    goals:       [...document.querySelectorAll('.goal-chip.selected')].map(b => b.dataset.goal),
+  };
+}
+
+async function generatePlan() {
+  // Save form state before doing anything
+  saveFormState();
+
+  const { postcode, size, gardenType, goals } = planFormState;
+
+  // ── Validate ──────────────────────────────────────────────
+  const ukFull = /^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$/i;
+  const euMin  = postcode.length >= 3;
+  if (!postcode) {
+    document.getElementById('planPostcode').classList.add('error');
+    document.getElementById('planPostcode').focus();
+    return;
+  }
+  document.getElementById('planPostcode').classList.remove('error');
+
+  // ── Show loading ──────────────────────────────────────────
+  document.getElementById('drawerTitle').textContent = 'Creating your plan…';
+  document.getElementById('drawerBody').innerHTML = `
+    <div class="plan-loading">
+      <div class="spinner"></div>
+      <p>Researching native species for your area<br>and building your seasonal planting plan…</p>
+    </div>
+  `;
+
+  // ── Build prompt ──────────────────────────────────────────
+  const goalsText = goals.length > 0 ? goals.join(', ') : 'general biodiversity';
+  const sizeText  = size || 'medium sized';
+  const typeText  = gardenType || 'general garden';
+
+  const prompt = `You are an expert rewilding advisor. Create a personalised native planting plan for a homeowner.
+
+Location: ${postcode}
+Garden size: ${sizeText}
+Current garden type: ${typeText}
+Habitat goals: ${goalsText}
+
+Return ONLY a valid JSON object with this exact structure — no markdown, no explanation, just the JSON:
+{
+  "location_description": "brief plain-English description of the location's ecology (1 sentence)",
+  "seasons": {
+    "autumn": [
+      {
+        "common_name": "plant name",
+        "latin_name": "Latin name",
+        "type": "tree|shrub|ground|climber",
+        "reason": "why this plant suits this specific location and goals (1-2 sentences)",
+        "wildlife": "which specific wildlife it supports"
+      }
+    ],
+    "winter": [],
+    "spring": [],
+    "summer": []
+  }
+}
+
+Rules:
+- Each season must have exactly 2-3 plants
+- All plants must be native to the region indicated by the postcode
+- type must be exactly one of: tree, shrub, ground, climber
+- reason must be specific to the postcode region, not generic
+- wildlife must name specific species, not just "insects" or "birds"
+- Return only the JSON object, nothing else`;
+
+  // ── Call API ──────────────────────────────────────────────
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': window._apiKey || '',
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1500,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    // 401 = no API key in this environment — use mock mode
+    if (response.status === 401) {
+      const mockPlan = getMockPlan(postcode);
+      lastPlanResult = mockPlan;
+      renderPlan(mockPlan, planFormState, true);
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(`API responded with status ${response.status}`);
+    }
+
+    const data = await response.json();
+    const raw  = data.content?.[0]?.text || '';
+    const cleaned = raw.replace(/```json|```/g, '').trim();
+    const plan    = JSON.parse(cleaned);
+
+    if (!plan.seasons || !plan.seasons.autumn || !plan.seasons.winter ||
+        !plan.seasons.spring || !plan.seasons.summer) {
+      throw new Error('Plan structure incomplete');
+    }
+
+    lastPlanResult = plan;
+    renderPlan(plan, planFormState, false);
+
+  } catch(err) {
+    renderPlanError();
+  }
+}
+
+function renderPlan(plan, formState, isMock = false) {
+  document.getElementById('drawerTitle').textContent = 'Your planting plan';
+
+  const mockBanner = isMock ? `
+    <div style="background:rgba(200,168,75,0.1);border:1px solid rgba(200,168,75,0.3);border-left:3px solid var(--gold);border-radius:0 4px 4px 0;padding:0.6rem 0.75rem;margin-bottom:1rem;font-size:0.75rem;color:var(--soil);line-height:1.5;">
+      <strong style="color:var(--gold);">Demo plan</strong> — This is a representative plan for your region. Live AI-generated plans will be available when the app is hosted.
+    </div>` : '';
+
+  const seasonsHtml = SEASONS.map(s => {
+    const plants = plan.seasons[s.key] || [];
+    if (plants.length === 0) return '';
+
+    const plantsHtml = plants.map(p => {
+      const badgeCfg = TYPE_BADGE[p.type] || { cls:'badge-other', label: p.type };
+      const nurseryHtml = p.nursery
+        ? `<div class="plant-nursery">🛒 <a href="${p.nursery.url}" target="_blank" rel="noopener">${p.nursery.name}</a> <span>${p.nursery.note}</span></div>`
+        : `<div class="plant-nursery no-nursery">🛒 <span>No supplier link available for this plant yet — check back soon.</span></div>`;
+      return `
+        <div class="plant-card">
+          <div class="plant-card-top">
+            <div>
+              <div class="plant-name">${p.common_name}</div>
+              <div class="plant-latin">${p.latin_name}</div>
+            </div>
+            <span class="plant-type-badge ${badgeCfg.cls}">${badgeCfg.label}</span>
+          </div>
+          <div class="plant-reason">${p.reason}</div>
+          <div class="plant-wildlife">🦋 <span>${p.wildlife}</span></div>
+          ${nurseryHtml}
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="season-block">
+        <div class="season-title">${s.icon} ${s.label}</div>
+        ${plantsHtml}
+      </div>`;
+  }).join('');
+
+  document.getElementById('drawerBody').innerHTML = `
+    <button class="back-btn" onclick="showFormFromPlan()">← Edit my details</button>
+    ${mockBanner}
+    <div class="plan-intro">${plan.location_description}</div>
+    ${seasonsHtml}
+  `;
+}
+
+function renderPlanError() {
+  document.getElementById('drawerTitle').textContent = "You're-wild";
+  renderForm(planFormState);
+  document.getElementById('drawerBody').insertAdjacentHTML('afterbegin', `
+    <div class="plan-error">
+      <p>Sorry, we couldn't generate your plan. Please check your connection and try again.</p>
+      <button class="retry-btn" onclick="generatePlan()">Try again</button>
+    </div>
+  `);
+}
+
+function showFormFromPlan() {
+  lastPlanResult = null;
+  renderForm(planFormState);
+}
+
+// ═══════════════════════════════════════════════════════════
+// MOBILE NAV + MOBILE-SPECIFIC FUNCTIONS
+// ═══════════════════════════════════════════════════════════
+
+let currentTab = 'discover';
+
+function isMobile() {
+  return window.innerWidth <= 640;
+}
+
+function switchTab(tab) {
+  if (!isMobile()) return;
+  currentTab = tab;
+
+  const discoverBtn = document.getElementById('navDiscover');
+  const mywildBtn   = document.getElementById('navMywild');
+  const mywildScreen = document.getElementById('mywildScreen');
+  const mainArea    = document.querySelector('.main');
+
+  if (tab === 'discover') {
+    discoverBtn.classList.add('active');
+    mywildBtn.classList.remove('active');
+    mywildScreen.classList.remove('active');
+    mainArea.style.display = '';
+    // Close any open panels/drawers
+    closePlanDrawer();
+  } else {
+    mywildBtn.classList.add('active');
+    discoverBtn.classList.remove('active');
+    mywildScreen.classList.add('active');
+    mainArea.style.display = 'none';
+    // Sync plan state into mywild screen
+    renderMywildScreen();
+  }
+}
+
+function renderMywildScreen() {
+  const body = document.getElementById('mywildBody');
+  if (!body) return;
+
+  // If we have a plan result, show it; otherwise show the form
+  if (lastPlanResult) {
+    // Reuse plan rendering but target mywild body
+    const savedId = 'drawerBody';
+    const savedTitle = document.getElementById('drawerTitle')?.textContent;
+    // Temporarily render into mywild
+    const tmp = document.createElement('div');
+    tmp.id = 'drawerBody';
+    tmp.style.display = 'none';
+    document.body.appendChild(tmp);
+    renderPlan(lastPlanResult, planFormState, false);
+    body.innerHTML = tmp.innerHTML;
+    tmp.remove();
+    if (savedTitle && document.getElementById('drawerTitle')) {
+      document.getElementById('drawerTitle').textContent = savedTitle;
+    }
+  } else {
+    // Render the form directly into mywild body
+    body.innerHTML = buildPlanFormHTML(planFormState);
+    updateGoalChipStates();
+  }
+}
+
+function buildPlanFormHTML(prefill = {}) {
+  const selectedGoals = new Set(prefill.goals || []);
+  return `
+    <div class="form-group">
+      <label class="form-label" for="mwPlanPostcode">Your postcode</label>
+      <input class="form-input" id="mwPlanPostcode" type="text"
+        placeholder="e.g. BN1 1AA"
+        value="${prefill.postcode || ''}"
+        autocomplete="off" autocorrect="off" spellcheck="false" inputmode="text"
+      />
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="mwPlanSize">Garden size (m²)</label>
+      <select class="form-select" id="mwPlanSize">
+        <option value="" ${!prefill.size?'selected':''}>Select size…</option>
+        ${GARDEN_SIZES.map(s=>`<option value="${s}" ${prefill.size===s?'selected':''}>${s}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="mwPlanGardenType">Current garden type</label>
+      <select class="form-select" id="mwPlanGardenType">
+        <option value="" ${!prefill.gardenType?'selected':''}>Select type…</option>
+        ${GARDEN_TYPES.map(t=>`<option value="${t}" ${prefill.gardenType===t?'selected':''}>${t}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Habitat goals <span class="goals-hint" id="mwGoalsHint">Choose up to 3</span></label>
+      <div class="goals-grid" id="mwGoalsGrid">
+        ${HABITAT_GOALS.map(g=>`
+          <button type="button" class="goal-chip ${selectedGoals.has(g.id)?'selected':''}"
+            data-goal="${g.id}" onclick="toggleMwGoal(this)">${g.label}</button>
+        `).join('')}
+      </div>
+    </div>
+    <button class="generate-btn" onclick="generateMwPlan()" style="margin-top:1rem;">
+      Generate my planting plan ✨
+    </button>
+  `;
+}
+
+function toggleMwGoal(btn) {
+  const selected = document.querySelectorAll('#mwGoalsGrid .goal-chip.selected');
+  if (!btn.classList.contains('selected') && selected.length >= 3) return;
+  btn.classList.toggle('selected');
+  updateMwGoalChipStates();
+}
+
+function updateMwGoalChipStates() {
+  const selected = document.querySelectorAll('#mwGoalsGrid .goal-chip.selected');
+  const hint = document.getElementById('mwGoalsHint');
+  const atLimit = selected.length >= 3;
+  document.querySelectorAll('#mwGoalsGrid .goal-chip').forEach(c => {
+    if (!c.classList.contains('selected')) {
+      c.disabled = atLimit;
+      c.style.opacity = atLimit ? '0.35' : '1';
+      c.style.cursor  = atLimit ? 'not-allowed' : 'pointer';
+    } else {
+      c.disabled = false; c.style.opacity = '1'; c.style.cursor = 'pointer';
+    }
+  });
+  if (hint) {
+    hint.textContent  = atLimit ? 'Maximum reached — deselect one to change' : 'Choose up to 3';
+    hint.style.color  = atLimit ? 'var(--gold)' : 'var(--soil)';
+    hint.style.fontWeight = atLimit ? '700' : '400';
+  }
+}
+
+async function generateMwPlan() {
+  const postcode   = document.getElementById('mwPlanPostcode')?.value.trim() || '';
+  const size       = document.getElementById('mwPlanSize')?.value || '';
+  const gardenType = document.getElementById('mwPlanGardenType')?.value || '';
+  const goals      = [...document.querySelectorAll('#mwGoalsGrid .goal-chip.selected')].map(b => b.dataset.goal);
+
+  planFormState = { postcode, size, gardenType, goals };
+
+  if (!postcode) {
+    const el = document.getElementById('mwPlanPostcode');
+    if (el) { el.classList.add('error'); el.focus(); }
+    return;
+  }
+
+  const body = document.getElementById('mywildBody');
+  body.innerHTML = `
+    <div class="plan-loading">
+      <div class="spinner"></div>
+      <p>Researching native species for your area<br>and building your seasonal planting plan…</p>
+    </div>
+  `;
+
+  const goalsText = goals.length > 0 ? goals.join(', ') : 'general biodiversity';
+  const sizeText  = size || 'medium sized';
+  const typeText  = gardenType || 'general garden';
+
+  const prompt = `You are an expert rewilding advisor. Create a personalised native planting plan for a homeowner.
+
+Location: ${postcode}
+Garden size: ${sizeText}
+Current garden type: ${typeText}
+Habitat goals: ${goalsText}
+
+Return ONLY a valid JSON object with this exact structure — no markdown, no explanation, just the JSON:
+{
+  "location_description": "brief plain-English description of the location's ecology (1 sentence)",
+  "seasons": {
+    "autumn": [
+      {
+        "common_name": "plant name",
+        "latin_name": "Latin name",
+        "type": "tree|shrub|ground|climber",
+        "reason": "why this plant suits this specific location and goals (1-2 sentences)",
+        "wildlife": "which specific wildlife it supports"
+      }
+    ],
+    "winter": [],
+    "spring": [],
+    "summer": []
+  }
+}
+
+Rules:
+- Each season must have exactly 2-3 plants
+- All plants must be native to the region indicated by the postcode
+- type must be exactly one of: tree, shrub, ground, climber
+- reason must be specific to the postcode region, not generic
+- wildlife must name specific species, not just "insects" or "birds"
+- Return only the JSON object, nothing else`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': window._apiKey || '',
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1500,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    let plan;
+    if (response.status === 401) {
+      plan = getMockPlan(postcode);
+      lastPlanResult = plan;
+      renderMwPlan(plan, true);
+      return;
+    }
+    if (!response.ok) throw new Error(`API ${response.status}`);
+
+    const data = await response.json();
+    const raw  = data.content?.[0]?.text || '';
+    const cleaned = raw.replace(/```json|```/g, '').trim();
+    plan = JSON.parse(cleaned);
+
+    if (!plan.seasons?.autumn) throw new Error('Incomplete plan');
+    lastPlanResult = plan;
+    renderMwPlan(plan, false);
+  } catch(err) {
+    body.innerHTML = `
+      <div class="plan-error">
+        <p>Sorry, we couldn't generate your plan. Please check your connection and try again.</p>
+        <button class="retry-btn" onclick="generateMwPlan()">Try again</button>
+      </div>
+      ${buildPlanFormHTML(planFormState)}
+    `;
+    updateMwGoalChipStates();
+  }
+}
+
+function renderMwPlan(plan, isMock = false) {
+  const body = document.getElementById('mywildBody');
+  if (!body) return;
+
+  const mockBanner = isMock ? `
+    <div style="background:rgba(200,168,75,0.1);border:1px solid rgba(200,168,75,0.3);border-left:3px solid var(--gold);border-radius:0 4px 4px 0;padding:0.6rem 0.75rem;margin-bottom:1rem;font-size:0.75rem;color:var(--soil);line-height:1.5;">
+      <strong style="color:var(--gold);">Demo plan</strong> — Representative plan for your region. Live AI plans available when hosted.
+    </div>` : '';
+
+  const seasonsHtml = SEASONS.map(s => {
+    const plants = plan.seasons[s.key] || [];
+    if (plants.length === 0) return '';
+    const plantsHtml = plants.map(p => {
+      const badgeCfg = TYPE_BADGE[p.type] || { cls:'badge-other', label: p.type };
+      const nurseryHtml = p.nursery
+        ? `<div class="plant-nursery">🛒 <a href="${p.nursery.url}" target="_blank" rel="noopener">${p.nursery.name}</a> <span>${p.nursery.note}</span></div>`
+        : `<div class="plant-nursery no-nursery">🛒 <span>No supplier link yet — check back soon.</span></div>`;
+      return `
+        <div class="plant-card">
+          <div class="plant-card-top">
+            <div>
+              <div class="plant-name">${p.common_name}</div>
+              <div class="plant-latin">${p.latin_name}</div>
+            </div>
+            <span class="plant-type-badge ${badgeCfg.cls}">${badgeCfg.label}</span>
+          </div>
+          <div class="plant-reason">${p.reason}</div>
+          <div class="plant-wildlife">🦋 <span>${p.wildlife}</span></div>
+          ${nurseryHtml}
+        </div>`;
+    }).join('');
+    return `<div class="season-block"><div class="season-title">${s.icon} ${s.label}</div>${plantsHtml}</div>`;
+  }).join('');
+
+  body.innerHTML = `
+    <button class="back-btn" onclick="resetMwPlan()">← Edit my details</button>
+    ${mockBanner}
+    <div class="plan-intro">${plan.location_description}</div>
+    ${seasonsHtml}
+  `;
+}
+
+function resetMwPlan() {
+  lastPlanResult = null;
+  const body = document.getElementById('mywildBody');
+  if (body) {
+    body.innerHTML = buildPlanFormHTML(planFormState);
+    updateMwGoalChipStates();
+  }
+}
+
+// Mobile search sync
+function mobileSyncAndSearch() {
+  const mobileInput = document.getElementById('mobilePostcodeInput');
+  const desktopInput = document.getElementById('postcodeInput');
+  if (mobileInput && desktopInput) {
+    desktopInput.value = mobileInput.value;
+  }
+  runSearch();
+}
+
+function onMobileSearchInput() {
+  const input = document.getElementById('mobilePostcodeInput');
+  const clear = document.getElementById('mobileSearchClear');
+  if (clear) clear.classList.toggle('show', input.value.length > 0);
+  // Keep desktop input in sync
+  const desk = document.getElementById('postcodeInput');
+  if (desk) desk.value = input.value;
+}
+
+function mobileClearSearch() {
+  const input = document.getElementById('mobilePostcodeInput');
+  if (input) input.value = '';
+  onMobileSearchInput();
+  clearSearch();
+}
+
+function setMobileFilter(type, btn) {
+  // Sync to desktop filter buttons
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.type === type);
+  });
+  document.querySelectorAll('.mobile-filter-chip').forEach(b => {
+    b.classList.toggle('active', b.dataset.type === type);
+  });
+  setFilter(type, document.querySelector(`.filter-btn[data-type="${type}"]`) || btn);
+}
+
+// Init mobile on load
+window.addEventListener('DOMContentLoaded', () => {
+  if (isMobile()) {
+    setTimeout(updateCount, 800);
+  }
+});
+</script>
 </body>
 </html>
