@@ -773,50 +773,90 @@
     }
     .mobile-search-clear.show { display: block; }
 
-    /* Filter strip floating below search */
+    /* Filter toggle button + dropdown */
     .mobile-filter-strip {
       display: flex;
       position: absolute;
       top: calc(env(safe-area-inset-top, 12px) + 64px);
-      left: 12px; right: 12px;
+      left: 12px;
       z-index: 999;
-      gap: 6px;
-      overflow-x: auto;
-      scrollbar-width: none;
-      -webkit-overflow-scrolling: touch;
     }
-    .mobile-filter-strip::-webkit-scrollbar { display: none; }
-    .mobile-filter-chip {
+    .mobile-filter-toggle {
       display: flex;
       align-items: center;
-      gap: 5px;
-      padding: 0 12px;
-      height: 32px;
-      border-radius: 16px;
-      border: 1px solid rgba(181,201,168,0.25);
-      background: rgba(45,74,45,0.92);
+      gap: 6px;
+      height: 34px;
+      padding: 0 14px;
+      background: rgba(45,74,45,0.95);
       backdrop-filter: blur(8px);
-      color: rgba(181,201,168,0.8);
+      border: 1px solid rgba(181,201,168,0.25);
+      border-radius: 10px;
+      color: rgba(181,201,168,0.9);
       font-family: 'Lato', sans-serif;
       font-size: 0.72rem;
       font-weight: 700;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.05em;
       text-transform: uppercase;
       cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
       white-space: nowrap;
-      flex-shrink: 0;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
-    .mobile-filter-chip.active {
-      background: var(--fern);
+    .mobile-filter-toggle.has-filter {
       border-color: var(--fern);
       color: white;
+      background: var(--fern);
     }
-    .mobile-filter-chip .chip-dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      flex-shrink: 0;
+    .mobile-filter-toggle svg { width: 13px; height: 13px; flex-shrink: 0; }
+    .mobile-filter-chevron { transition: transform 0.2s ease; }
+    .mobile-filter-toggle.open .mobile-filter-chevron { transform: rotate(180deg); }
+
+    .mobile-filter-dropdown {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      background: rgba(36,58,36,0.98);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(181,201,168,0.2);
+      border-radius: 12px;
+      padding: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 160px;
+      z-index: 1000;
     }
+    .mobile-filter-dropdown.open { display: flex; animation: fadeIn 0.15s ease; }
+    .mobile-filter-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: rgba(181,201,168,0.75);
+      font-family: 'Lato', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+    }
+    .mobile-filter-option:hover { background: rgba(181,201,168,0.08); color: var(--lichen); }
+    .mobile-filter-option.active { background: rgba(61,107,61,0.25); color: white; }
+    .mobile-filter-option .chip-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%; flex-shrink: 0;
+    }
+    .mobile-filter-option .option-check {
+      margin-left: auto;
+      opacity: 0;
+      font-size: 0.9rem;
+      color: var(--gold);
+    }
+    .mobile-filter-option.active .option-check { opacity: 1; }
 
     /* Map fills remaining space */
     #map {
@@ -1055,24 +1095,33 @@
     <button class="mobile-search-go" onclick="mobileSyncAndSearch()">Search</button>
   </div>
 
-  <!-- MOBILE FILTER STRIP -->
+  <!-- MOBILE FILTER DROPDOWN -->
   <div class="mobile-filter-strip" id="mobileFilterStrip">
-    <button class="mobile-filter-chip active" data-type="all" onclick="setMobileFilter('all',this)">All</button>
-    <button class="mobile-filter-chip" data-type="woodland" onclick="setMobileFilter('woodland',this)">
-      <span class="chip-dot" style="background:#2d7a2d"></span>Woodland
+    <button class="mobile-filter-toggle" id="mobileFilterToggle" onclick="toggleMobileFilterDropdown()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+      <span id="mobileFilterLabel">All sites</span>
+      <svg class="mobile-filter-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
     </button>
-    <button class="mobile-filter-chip" data-type="wetland" onclick="setMobileFilter('wetland',this)">
-      <span class="chip-dot" style="background:#3d8fad"></span>Wetland
-    </button>
-    <button class="mobile-filter-chip" data-type="meadow" onclick="setMobileFilter('meadow',this)">
-      <span class="chip-dot" style="background:#c8a84b"></span>Meadow
-    </button>
-    <button class="mobile-filter-chip" data-type="garden" onclick="setMobileFilter('garden',this)">
-      <span class="chip-dot" style="background:#7a5f9e"></span>Garden
-    </button>
-    <button class="mobile-filter-chip" data-type="reserve" onclick="setMobileFilter('reserve',this)">
-      <span class="chip-dot" style="background:#b54b4b"></span>Reserve
-    </button>
+    <div class="mobile-filter-dropdown" id="mobileFilterDropdown">
+      <button class="mobile-filter-option active" data-type="all" onclick="setMobileFilter('all',this)">
+        <span class="chip-dot" style="background:rgba(181,201,168,0.5)"></span>All sites<span class="option-check">✓</span>
+      </button>
+      <button class="mobile-filter-option" data-type="woodland" onclick="setMobileFilter('woodland',this)">
+        <span class="chip-dot" style="background:#2d7a2d"></span>Woodland<span class="option-check">✓</span>
+      </button>
+      <button class="mobile-filter-option" data-type="wetland" onclick="setMobileFilter('wetland',this)">
+        <span class="chip-dot" style="background:#3d8fad"></span>Wetland<span class="option-check">✓</span>
+      </button>
+      <button class="mobile-filter-option" data-type="meadow" onclick="setMobileFilter('meadow',this)">
+        <span class="chip-dot" style="background:#c8a84b"></span>Meadow<span class="option-check">✓</span>
+      </button>
+      <button class="mobile-filter-option" data-type="garden" onclick="setMobileFilter('garden',this)">
+        <span class="chip-dot" style="background:#7a5f9e"></span>Garden<span class="option-check">✓</span>
+      </button>
+      <button class="mobile-filter-option" data-type="reserve" onclick="setMobileFilter('reserve',this)">
+        <span class="chip-dot" style="background:#b54b4b"></span>Reserve<span class="option-check">✓</span>
+      </button>
+    </div>
   </div>
 
   <!-- MOBILE SITE COUNT BADGE -->
@@ -2034,13 +2083,16 @@ function renderMywildScreen() {
   } else {
     // Render the form directly into mywild body
     body.innerHTML = buildPlanFormHTML(planFormState);
-    updateGoalChipStates();
+    updateMwGoalChipStates();
   }
 }
 
 function buildPlanFormHTML(prefill = {}) {
   const selectedGoals = new Set(prefill.goals || []);
   return `
+    <p style="font-size:0.83rem;color:var(--soil);line-height:1.6;margin-bottom:1.25rem;">
+      Tell us a little about your garden and we'll create a personalised seasonal planting plan using native species suited to your area.
+    </p>
     <div class="form-group">
       <label class="form-label" for="mwPlanPostcode">Your postcode</label>
       <input class="form-input" id="mwPlanPostcode" type="text"
@@ -2050,10 +2102,13 @@ function buildPlanFormHTML(prefill = {}) {
       />
     </div>
     <div class="form-group">
-      <label class="form-label" for="mwPlanSize">Garden size (m²)</label>
+      <label class="form-label" for="mwPlanSize">Approximate garden size</label>
       <select class="form-select" id="mwPlanSize">
         <option value="" ${!prefill.size?'selected':''}>Select size…</option>
-        ${GARDEN_SIZES.map(s=>`<option value="${s}" ${prefill.size===s?'selected':''}>${s}</option>`).join('')}
+        <option value="small (under 25m²)"     ${prefill.size==='small (under 25m²)'?'selected':''}>Small — under 25m²</option>
+        <option value="medium (25–100m²)"       ${prefill.size==='medium (25–100m²)'?'selected':''}>Medium — 25–100m²</option>
+        <option value="large (100–500m²)"       ${prefill.size==='large (100–500m²)'?'selected':''}>Large — 100–500m²</option>
+        <option value="very large (over 500m²)" ${prefill.size==='very large (over 500m²)'?'selected':''}>Very large — over 500m²</option>
       </select>
     </div>
     <div class="form-group">
@@ -2287,12 +2342,45 @@ function mobileClearSearch() {
   clearSearch();
 }
 
+function toggleMobileFilterDropdown() {
+  const toggle   = document.getElementById('mobileFilterToggle');
+  const dropdown = document.getElementById('mobileFilterDropdown');
+  if (!toggle || !dropdown) return;
+  const isOpen = dropdown.classList.contains('open');
+  toggle.classList.toggle('open', !isOpen);
+  dropdown.classList.toggle('open', !isOpen);
+  // Close on outside tap
+  if (!isOpen) {
+    setTimeout(() => {
+      document.addEventListener('click', closeMobileFilterOnOutside, { once: true });
+    }, 0);
+  }
+}
+
+function closeMobileFilterOnOutside(e) {
+  const strip = document.getElementById('mobileFilterStrip');
+  if (strip && !strip.contains(e.target)) {
+    document.getElementById('mobileFilterToggle')?.classList.remove('open');
+    document.getElementById('mobileFilterDropdown')?.classList.remove('open');
+  }
+}
+
 function setMobileFilter(type, btn) {
-  // Sync to desktop filter buttons
-  document.querySelectorAll('.filter-btn').forEach(b => {
+  // Update dropdown option active states
+  document.querySelectorAll('.mobile-filter-option').forEach(b => {
     b.classList.toggle('active', b.dataset.type === type);
   });
-  document.querySelectorAll('.mobile-filter-chip').forEach(b => {
+  // Update toggle label + active style
+  const labels = { all:'All sites', woodland:'Woodland', wetland:'Wetland', meadow:'Meadow', garden:'Garden', reserve:'Reserve' };
+  const labelEl = document.getElementById('mobileFilterLabel');
+  if (labelEl) labelEl.textContent = labels[type] || 'All sites';
+  const toggle = document.getElementById('mobileFilterToggle');
+  if (toggle) toggle.classList.toggle('has-filter', type !== 'all');
+  // Close dropdown
+  toggle?.classList.remove('open');
+  document.getElementById('mobileFilterDropdown')?.classList.remove('open');
+  // Sync to desktop filter buttons and apply
+  document.querySelectorAll('.filter-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.type === type);
   });
   setFilter(type, document.querySelector(`.filter-btn[data-type="${type}"]`) || btn);
@@ -2302,6 +2390,12 @@ function setMobileFilter(type, btn) {
 window.addEventListener('DOMContentLoaded', () => {
   if (isMobile()) {
     setTimeout(updateCount, 800);
+    // Pre-render the My Wild form so it's ready when the tab is tapped
+    const body = document.getElementById('mywildBody');
+    if (body) {
+      body.innerHTML = buildPlanFormHTML(planFormState);
+      updateMwGoalChipStates();
+    }
   }
 });
 </script>
