@@ -2064,24 +2064,19 @@ function renderMywildScreen() {
   const body = document.getElementById('mywildBody');
   if (!body) return;
 
-  // If we have a plan result, show it; otherwise show the form
+  // Try in-memory first, then sessionStorage fallback
+  if (!lastPlanResult) {
+    try {
+      const stored = sessionStorage.getItem('yourewild_plan');
+      if (stored) lastPlanResult = JSON.parse(stored);
+      const storedForm = sessionStorage.getItem('yourewild_form');
+      if (storedForm) planFormState = JSON.parse(storedForm);
+    } catch(e) {}
+  }
+
   if (lastPlanResult) {
-    // Reuse plan rendering but target mywild body
-    const savedId = 'drawerBody';
-    const savedTitle = document.getElementById('drawerTitle')?.textContent;
-    // Temporarily render into mywild
-    const tmp = document.createElement('div');
-    tmp.id = 'drawerBody';
-    tmp.style.display = 'none';
-    document.body.appendChild(tmp);
-    renderPlan(lastPlanResult, planFormState, false);
-    body.innerHTML = tmp.innerHTML;
-    tmp.remove();
-    if (savedTitle && document.getElementById('drawerTitle')) {
-      document.getElementById('drawerTitle').textContent = savedTitle;
-    }
+    renderMwPlan(lastPlanResult, false);
   } else {
-    // Render the form directly into mywild body
     body.innerHTML = buildPlanFormHTML(planFormState);
     updateMwGoalChipStates();
   }
@@ -2167,6 +2162,7 @@ async function generateMwPlan() {
   const goals      = [...document.querySelectorAll('#mwGoalsGrid .goal-chip.selected')].map(b => b.dataset.goal);
 
   planFormState = { postcode, size, gardenType, goals };
+  try { sessionStorage.setItem('yourewild_form', JSON.stringify(planFormState)); } catch(e) {}
 
   if (!postcode) {
     const el = document.getElementById('mwPlanPostcode');
@@ -2305,10 +2301,17 @@ function renderMwPlan(plan, isMock = false) {
     <div class="plan-intro">${plan.location_description}</div>
     ${seasonsHtml}
   `;
+
+  // Persist so tab switches don't lose the plan
+  try {
+    sessionStorage.setItem('yourewild_plan', JSON.stringify(plan));
+    sessionStorage.setItem('yourewild_form', JSON.stringify(planFormState));
+  } catch(e) {}
 }
 
 function resetMwPlan() {
   lastPlanResult = null;
+  try { sessionStorage.removeItem('yourewild_plan'); } catch(e) {}
   const body = document.getElementById('mywildBody');
   if (body) {
     body.innerHTML = buildPlanFormHTML(planFormState);
