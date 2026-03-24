@@ -1720,6 +1720,7 @@ function getMockPlan(postcode) {
 // seasonal plan with native plants, type badges, AI error handled,
 // retry available, form state preserved on back.
 
+const PLAN_MODEL   = 'claude-sonnet-4-6';
 const GARDEN_TYPES = ['Lawn','Patio / paved','Mixed borders','Overgrown / neglected','New build / bare soil','Woodland edge','Other'];
 const HABITAT_GOALS = [
   { id:'pollinators', label:'🐝 Pollinators' },
@@ -1850,37 +1851,18 @@ function saveFormState() {
   };
 }
 
-async function generatePlan() {
-  // Save form state before doing anything
-  saveFormState();
+// ── SHARED: PLAN API CORE ────────────────────────────────────
+// Single source of truth for prompt construction and API call.
+// Both the desktop drawer and mobile My Wild screen call this.
+//
+// Returns { plan, isMock } on success, throws on error.
 
-  const { postcode, size, gardenType, goals } = planFormState;
-
-  // ── Validate ──────────────────────────────────────────────
-  const ukFull = /^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$/i;
-  const euMin  = postcode.length >= 3;
-  if (!postcode) {
-    document.getElementById('planPostcode').classList.add('error');
-    document.getElementById('planPostcode').focus();
-    return;
-  }
-  document.getElementById('planPostcode').classList.remove('error');
-
-  // ── Show loading ──────────────────────────────────────────
-  document.getElementById('drawerTitle').textContent = 'Creating your plan…';
-  document.getElementById('drawerBody').innerHTML = `
-    <div class="plan-loading">
-      <div class="spinner"></div>
-      <p>Researching native species for your area<br>and building your seasonal planting plan…</p>
-    </div>
-  `;
-
-  // ── Build prompt ──────────────────────────────────────────
+function buildPlanPrompt(formState) {
+  const { postcode, size, gardenType, goals } = formState;
   const goalsText = goals.length > 0 ? goals.join(', ') : 'general biodiversity';
   const sizeText  = size || 'medium sized';
   const typeText  = gardenType || 'general garden';
-
-  const prompt = `You are an expert rewilding advisor. Create a personalised native planting plan for a homeowner.
+  return `You are an expert rewilding advisor. Create a personalised native planting plan for a homeowner.
 
 Location: ${postcode}
 Garden size: ${sizeText}
@@ -1913,57 +1895,49 @@ Rules:
 - reason must be specific to the postcode region, not generic
 - wildlife must name specific species, not just "insects" or "birds"
 - Return only the JSON object, nothing else`;
-
-  // ── Call API ──────────────────────────────────────────────
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': window._apiKey || '',
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1500,
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-
-    // 401 = no API key in this environment — use mock mode
-    if (response.status === 401) {
-      const mockPlan = getMockPlan(postcode);
-      lastPlanResult = mockPlan;
-      renderPlan(mockPlan, planFormState, true);
-      return;
-    }
-
-    if (!response.ok) {
-      throw new Error(`API responded with status ${response.status}`);
-    }
-
-    const data = await response.json();
-    const raw  = data.content?.[0]?.text || '';
-    const cleaned = raw.replace(/```json|```/g, '').trim();
-    const plan    = JSON.parse(cleaned);
-
-    if (!plan.seasons || !plan.seasons.autumn || !plan.seasons.winter ||
-        !plan.seasons.spring || !plan.seasons.summer) {
-      throw new Error('Plan structure incomplete');
-    }
-
-    lastPlanResult = plan;
-    renderPlan(plan, planFormState, false);
-
-  } catch(err) {
-    renderPlanError();
-  }
 }
 
-function renderPlan(plan, formState, isMock = false) {
-  document.getElementById('drawerTitle').textContent = 'Your planting plan';
+async function callPlanAPI(formState) {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': window._apiKey || '',
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: PLAN_MODEL,
+      max_tokens: 1500,
+      messages: [{ role: 'user', content: buildPlanPrompt(formState) }]
+    })
+  });
 
+  // 401 = no key in this environment — fall back to regional mock
+  if (response.status === 401) {
+    return { plan: getMockPlan(formState.postcode), isMock: true };
+  }
+
+  if (!response.ok) throw new Error(`API responded with status ${response.status}`);
+
+  const data    = await response.json();
+  const raw     = data.content?.[0]?.text || '';
+  const cleaned = raw.replace(/```json|```/g, '').trim();
+  const plan    = JSON.parse(cleaned);
+
+  if (!plan.seasons?.autumn || !plan.seasons?.winter ||
+      !plan.seasons?.spring || !plan.seasons?.summer) {
+    throw new Error('Plan structure incomplete');
+  }
+
+  return { plan, isMock: false };
+}
+
+// ── SHARED: PLAN HTML BUILDER ────────────────────────────────
+// Produces the inner HTML for a rendered plan.
+// backFn: name of the JS function to call when "← Edit" is clicked.
+
+function buildPlanHTML(plan, isMock, backFn) {
   const mockBanner = isMock ? `
     <div style="background:rgba(200,168,75,0.1);border:1px solid rgba(200,168,75,0.3);border-left:3px solid var(--gold);border-radius:0 4px 4px 0;padding:0.6rem 0.75rem;margin-bottom:1rem;font-size:0.75rem;color:var(--soil);line-height:1.5;">
       <strong style="color:var(--gold);">Demo plan</strong> — This is a representative plan for your region. Live AI-generated plans will be available when the app is hosted.
@@ -1972,11 +1946,10 @@ function renderPlan(plan, formState, isMock = false) {
   const seasonsHtml = SEASONS.map(s => {
     const plants = plan.seasons[s.key] || [];
     if (plants.length === 0) return '';
-
     const plantsHtml = plants.map(p => {
-      const badgeCfg = TYPE_BADGE[p.type] || { cls:'badge-other', label: p.type };
+      const badgeCfg   = TYPE_BADGE[p.type] || { cls:'badge-other', label: p.type };
       const nurseryHtml = p.nursery
-        ? `<div class="plant-nursery">🛒 <a href="${p.nursery.url}" target="_blank" rel="noopener">${p.nursery.name}</a> <span>${p.nursery.note}</span></div>`
+        ? `<div class="plant-nursery">🛒 <a href="${p.nursery.url}" target="_blank" rel="noopener noreferrer">${p.nursery.name}</a> <span>${p.nursery.note}</span></div>`
         : `<div class="plant-nursery no-nursery">🛒 <span>No supplier link available for this plant yet — check back soon.</span></div>`;
       return `
         <div class="plant-card">
@@ -1992,7 +1965,6 @@ function renderPlan(plan, formState, isMock = false) {
           ${nurseryHtml}
         </div>`;
     }).join('');
-
     return `
       <div class="season-block">
         <div class="season-title">${s.icon} ${s.label}</div>
@@ -2000,12 +1972,47 @@ function renderPlan(plan, formState, isMock = false) {
       </div>`;
   }).join('');
 
-  document.getElementById('drawerBody').innerHTML = `
-    <button class="back-btn" onclick="showFormFromPlan()">← Edit my details</button>
+  return `
+    <button class="back-btn" onclick="${backFn}()">← Edit my details</button>
     ${mockBanner}
     <div class="plan-intro">${plan.location_description}</div>
     ${seasonsHtml}
   `;
+}
+
+// ── DESKTOP DRAWER: generate / render / error / back ─────────
+
+async function generatePlan() {
+  saveFormState();
+  const { postcode } = planFormState;
+
+  if (!postcode) {
+    document.getElementById('planPostcode').classList.add('error');
+    document.getElementById('planPostcode').focus();
+    return;
+  }
+  document.getElementById('planPostcode').classList.remove('error');
+
+  document.getElementById('drawerTitle').textContent = 'Creating your plan…';
+  document.getElementById('drawerBody').innerHTML = `
+    <div class="plan-loading">
+      <div class="spinner"></div>
+      <p>Researching native species for your area<br>and building your seasonal planting plan…</p>
+    </div>
+  `;
+
+  try {
+    const { plan, isMock } = await callPlanAPI(planFormState);
+    lastPlanResult = plan;
+    renderPlan(plan, isMock);
+  } catch(err) {
+    renderPlanError();
+  }
+}
+
+function renderPlan(plan, isMock = false) {
+  document.getElementById('drawerTitle').textContent = 'Your planting plan';
+  document.getElementById('drawerBody').innerHTML = buildPlanHTML(plan, isMock, 'showFormFromPlan');
 }
 
 function renderPlanError() {
@@ -2155,6 +2162,8 @@ function updateMwGoalChipStates() {
   }
 }
 
+// ── MOBILE MY WILD: generate / render / back ─────────────────
+
 async function generateMwPlan() {
   const postcode   = document.getElementById('mwPlanPostcode')?.value.trim() || '';
   const size       = document.getElementById('mwPlanSize')?.value || '';
@@ -2178,77 +2187,10 @@ async function generateMwPlan() {
     </div>
   `;
 
-  const goalsText = goals.length > 0 ? goals.join(', ') : 'general biodiversity';
-  const sizeText  = size || 'medium sized';
-  const typeText  = gardenType || 'general garden';
-
-  const prompt = `You are an expert rewilding advisor. Create a personalised native planting plan for a homeowner.
-
-Location: ${postcode}
-Garden size: ${sizeText}
-Current garden type: ${typeText}
-Habitat goals: ${goalsText}
-
-Return ONLY a valid JSON object with this exact structure — no markdown, no explanation, just the JSON:
-{
-  "location_description": "brief plain-English description of the location's ecology (1 sentence)",
-  "seasons": {
-    "autumn": [
-      {
-        "common_name": "plant name",
-        "latin_name": "Latin name",
-        "type": "tree|shrub|ground|climber",
-        "reason": "why this plant suits this specific location and goals (1-2 sentences)",
-        "wildlife": "which specific wildlife it supports"
-      }
-    ],
-    "winter": [],
-    "spring": [],
-    "summer": []
-  }
-}
-
-Rules:
-- Each season must have exactly 2-3 plants
-- All plants must be native to the region indicated by the postcode
-- type must be exactly one of: tree, shrub, ground, climber
-- reason must be specific to the postcode region, not generic
-- wildlife must name specific species, not just "insects" or "birds"
-- Return only the JSON object, nothing else`;
-
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': window._apiKey || '',
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1500,
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-
-    let plan;
-    if (response.status === 401) {
-      plan = getMockPlan(postcode);
-      lastPlanResult = plan;
-      renderMwPlan(plan, true);
-      return;
-    }
-    if (!response.ok) throw new Error(`API ${response.status}`);
-
-    const data = await response.json();
-    const raw  = data.content?.[0]?.text || '';
-    const cleaned = raw.replace(/```json|```/g, '').trim();
-    plan = JSON.parse(cleaned);
-
-    if (!plan.seasons?.autumn) throw new Error('Incomplete plan');
+    const { plan, isMock } = await callPlanAPI(planFormState);
     lastPlanResult = plan;
-    renderMwPlan(plan, false);
+    renderMwPlan(plan, isMock);
   } catch(err) {
     body.innerHTML = `
       <div class="plan-error">
@@ -2264,45 +2206,7 @@ Rules:
 function renderMwPlan(plan, isMock = false) {
   const body = document.getElementById('mywildBody');
   if (!body) return;
-
-  const mockBanner = isMock ? `
-    <div style="background:rgba(200,168,75,0.1);border:1px solid rgba(200,168,75,0.3);border-left:3px solid var(--gold);border-radius:0 4px 4px 0;padding:0.6rem 0.75rem;margin-bottom:1rem;font-size:0.75rem;color:var(--soil);line-height:1.5;">
-      <strong style="color:var(--gold);">Demo plan</strong> — Representative plan for your region. Live AI plans available when hosted.
-    </div>` : '';
-
-  const seasonsHtml = SEASONS.map(s => {
-    const plants = plan.seasons[s.key] || [];
-    if (plants.length === 0) return '';
-    const plantsHtml = plants.map(p => {
-      const badgeCfg = TYPE_BADGE[p.type] || { cls:'badge-other', label: p.type };
-      const nurseryHtml = p.nursery
-        ? `<div class="plant-nursery">🛒 <a href="${p.nursery.url}" target="_blank" rel="noopener">${p.nursery.name}</a> <span>${p.nursery.note}</span></div>`
-        : `<div class="plant-nursery no-nursery">🛒 <span>No supplier link yet — check back soon.</span></div>`;
-      return `
-        <div class="plant-card">
-          <div class="plant-card-top">
-            <div>
-              <div class="plant-name">${p.common_name}</div>
-              <div class="plant-latin">${p.latin_name}</div>
-            </div>
-            <span class="plant-type-badge ${badgeCfg.cls}">${badgeCfg.label}</span>
-          </div>
-          <div class="plant-reason">${p.reason}</div>
-          <div class="plant-wildlife">🦋 <span>${p.wildlife}</span></div>
-          ${nurseryHtml}
-        </div>`;
-    }).join('');
-    return `<div class="season-block"><div class="season-title">${s.icon} ${s.label}</div>${plantsHtml}</div>`;
-  }).join('');
-
-  body.innerHTML = `
-    <button class="back-btn" onclick="resetMwPlan()">← Edit my details</button>
-    ${mockBanner}
-    <div class="plan-intro">${plan.location_description}</div>
-    ${seasonsHtml}
-  `;
-
-  // Persist so tab switches don't lose the plan
+  body.innerHTML = buildPlanHTML(plan, isMock, 'resetMwPlan');
   try {
     sessionStorage.setItem('yourewild_plan', JSON.stringify(plan));
     sessionStorage.setItem('yourewild_form', JSON.stringify(planFormState));
