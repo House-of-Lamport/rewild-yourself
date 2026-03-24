@@ -988,7 +988,7 @@
         oninput="onSearchInput()"
         aria-label="Search by postcode or town"
       />
-      <button class="search-btn" onclick="runSearch()">Search</button>
+      <button class="search-btn" id="searchBtn" onclick="runSearch()">Search</button>
       <button class="search-clear" id="searchClear" onclick="clearSearch()" aria-label="Clear search">×</button>
     </div>
 
@@ -1092,7 +1092,7 @@
       />
       <button class="mobile-search-clear" id="mobileSearchClear" onclick="mobileClearSearch()">×</button>
     </div>
-    <button class="mobile-search-go" onclick="mobileSyncAndSearch()">Search</button>
+    <button class="mobile-search-go" id="mobileSearchBtn" onclick="mobileSyncAndSearch()">Search</button>
   </div>
 
   <!-- MOBILE FILTER DROPDOWN -->
@@ -1424,9 +1424,10 @@ document.addEventListener('keydown', e => {
 // plain-language explanation shown, no-results state, invalid input handled.
 
 const SEARCH_RADIUS_KM = 80;
-let corridorLines = [];
-let searchCircle  = null;
-let userMarker    = null;
+let corridorLines  = [];
+let searchCircle   = null;
+let userMarker     = null;
+let searchInFlight = false;
 
 // Haversine distance between two lat/lng points in km
 function distKm(lat1, lng1, lat2, lng2) {
@@ -1455,7 +1456,20 @@ function hideSearchError() {
   document.getElementById('searchError').classList.remove('show');
 }
 
+// Set both search buttons into loading or ready state
+function setSearchLoading(loading) {
+  const desktopBtn = document.getElementById('searchBtn');
+  const mobileBtn  = document.getElementById('mobileSearchBtn');
+  [desktopBtn, mobileBtn].forEach(btn => {
+    if (!btn) return;
+    btn.disabled    = loading;
+    btn.textContent = loading ? 'Searching…' : 'Search';
+  });
+}
+
 async function runSearch() {
+  if (searchInFlight) return;
+
   const raw = document.getElementById('postcodeInput').value.trim();
   if (!raw) { showSearchError('Please enter a postcode or town name.'); return; }
 
@@ -1470,6 +1484,9 @@ async function runSearch() {
     showSearchError('Please enter a full postcode (e.g. EH1 1YZ) or a town name.');
     return;
   }
+
+  searchInFlight = true;
+  setSearchLoading(true);
 
   hideSearchError();
   clearCorridors();
@@ -1514,11 +1531,15 @@ async function runSearch() {
     }
   } catch(e) {
     showSearchError('Could not reach location service. Check your connection and try again.');
+    searchInFlight = false;
+    setSearchLoading(false);
     return;
   }
 
   if (lat === undefined) {
-    showSearchError(`"${raw}" wasn't recognised. Try a full postcode (e.g. BN1 1AA) or a town name.`);
+    showSearchError(`"${esc(raw)}" wasn't recognised. Try a full postcode (e.g. BN1 1AA) or a town name.`);
+    searchInFlight = false;
+    setSearchLoading(false);
     return;
   }
 
@@ -1546,6 +1567,8 @@ async function runSearch() {
   if (nearby.length === 0) {
     map.setView([lat, lng], 9);
     document.getElementById('nearbyEmpty').classList.add('show');
+    searchInFlight = false;
+    setSearchLoading(false);
     return;
   }
 
@@ -1574,6 +1597,9 @@ async function runSearch() {
     // Single nearby site — show corridor panel with encouraging message
     showCorridorPanel(nearby, nearby);
   }
+
+  searchInFlight = false;
+  setSearchLoading(false);
 }
 
 // Order sites by nearest-neighbour chain (greedy) so corridor lines don't criss-cross
