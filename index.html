@@ -1640,99 +1640,11 @@ function clearSearch() {
 }
 
 // ── STORY 3: MOCK PLANS (used when API key unavailable) ──────
-// Realistic regional plans seeded by postcode prefix.
-// These are removed and replaced by live AI calls in Phase 3.
-const MOCK_PLANS = {
-  southern_uk: {
-    location_description: "The South Downs and Sussex coastal plain support a rich mix of chalk grassland, hedgerow, and woodland species — ideal conditions for pollinators and ground-nesting birds.",
-    seasons: {
-      autumn: [
-        { common_name:"Field Maple", latin_name:"Acer campestre", type:"tree", reason:"Native to the Sussex chalk downs, field maple provides autumn colour and dense branching perfect for nesting birds in the South East.", wildlife:"Bullfinch, Comma butterfly, Treecreeper", nursery:{ name:"Trees Direct", url:"https://www.treesdirect.co.uk/products/field-maple", note:"Native trees, bare root and pot grown" } },
-        { common_name:"Spindle", latin_name:"Euonymus europaeus", type:"shrub", reason:"Thrives on the alkaline soils of the South Downs, its vivid pink and orange berries are a critical autumn food source in this region.", wildlife:"Robin, Blackbird, Orange-tip butterfly larvae", nursery:{ name:"Hedgerow Rose", url:"https://www.hedgerowrose.co.uk", note:"Native hedgerow shrubs for southern England" } },
-        { common_name:"Wild Marjoram", latin_name:"Origanum vulgare", type:"ground", reason:"A chalk grassland native ideally suited to well-drained Sussex soils, it extends the foraging season for pollinators well into autumn.", wildlife:"Common blue butterfly, Six-spot burnet moth, Buff-tailed bumblebee", nursery:{ name:"Habitat Aid", url:"https://www.habitataid.co.uk/collections/plug-plants", note:"Native wildflower plugs, UK grown" } },
-      ],
-      winter: [
-        { common_name:"Hazel", latin_name:"Corylus avellana", type:"shrub", reason:"A cornerstone of Sussex hedgerows, hazel catkins provide the first pollen of the year for queen bumblebees emerging in late winter.", wildlife:"Dormouse, Great tit, Long-tailed tit", nursery:{ name:"Trees Direct", url:"https://www.treesdirect.co.uk/products/hazel", note:"Native trees, bare root and pot grown" } },
-        { common_name:"Holly", latin_name:"Ilex aquifolium", type:"tree", reason:"Widespread across the South East, holly berries are a critical winter food source when other fruits have gone.", wildlife:"Mistle thrush, Holly blue butterfly, Redwing", nursery:{ name:"Hedgerow Rose", url:"https://www.hedgerowrose.co.uk", note:"Native hedgerow shrubs for southern England" } },
-      ],
-      spring: [
-        { common_name:"Bluebell", latin_name:"Hyacinthoides non-scripta", type:"ground", reason:"The native bluebell thrives beneath deciduous canopy across Sussex woodland edges, providing an early nectar source before most other plants flower.", wildlife:"Brimstone butterfly, Early bumblebee, Chiffchaff", nursery:{ name:"British Wildflower Plants", url:"https://www.wildflowerplants.com/bluebells", note:"Native bulbs and plugs, not Spanish hybrid" } },
-        { common_name:"Blackthorn", latin_name:"Prunus spinosa", type:"shrub", reason:"One of the first shrubs to flower in Sussex hedgerows, blackthorn blossom is invaluable for early emerging pollinators in March and April.", wildlife:"Brown hairstreak butterfly, Blackcap warbler, Hedgehog", nursery:{ name:"Hedgerow Rose", url:"https://www.hedgerowrose.co.uk", note:"Native hedgerow shrubs for southern England" } },
-        { common_name:"Primrose", latin_name:"Primula vulgaris", type:"ground", reason:"A native of Sussex woodland margins and banks, primrose provides nectar when little else is available and is a larval plant for the Duke of Burgundy butterfly.", wildlife:"Duke of Burgundy butterfly, Early bee, Brimstone butterfly", nursery:{ name:"Habitat Aid", url:"https://www.habitataid.co.uk/collections/plug-plants", note:"Native wildflower plugs, UK grown" } },
-      ],
-      summer: [
-        { common_name:"Oxeye Daisy", latin_name:"Leucanthemum vulgare", type:"ground", reason:"A classic chalk grassland plant of the South Downs, it naturalises readily in lawns and borders and blooms prolifically through June and July.", wildlife:"Marbled white butterfly, Common carder bee, Meadow brown butterfly", nursery:{ name:"Naturescape", url:"https://www.naturescape.co.uk/product-category/wildflower-plants", note:"Native wildflower plants and seeds" } },
-        { common_name:"Honeysuckle", latin_name:"Lonicera periclymenum", type:"climber", reason:"Native to Sussex hedgerows and woodland edges, honeysuckle flowers attract hawk-moths on warm evenings and its berries feed warblers in late summer.", wildlife:"Hummingbird hawk-moth, Garden warbler, White admiral butterfly", nursery:{ name:"British Wildflower Plants", url:"https://www.wildflowerplants.com", note:"Native climbing and hedgerow plants" } },
-        { common_name:"Yarrow", latin_name:"Achillea millefolium", type:"ground", reason:"Drought-tolerant and well-suited to the free-draining chalk soils of the South East, yarrow flowers from June to October and is highly attractive to hoverflies.", wildlife:"Thick-legged flower beetle, Common hoverfly, Painted lady butterfly", nursery:{ name:"Chiltern Seeds", url:"https://www.chilternseeds.co.uk/product/achillea-millefolium", note:"Native wildflower seeds, UK supplier" } },
-      ],
-    }
-  },
-  northern_uk: {
-    location_description: "The Scottish Lowlands and upland fringes support acid grassland, moorland scrub, and riparian woodland — a landscape where native planting can directly connect with some of Europe's most ambitious rewilding projects.",
-    seasons: {
-      autumn: [
-        { common_name:"Rowan", latin_name:"Sorbus aucuparia", type:"tree", reason:"One of the most important native trees in Scottish upland landscapes, rowan berries are a critical autumn food source and the tree tolerates the cool, wet conditions of central Scotland well.", wildlife:"Redwing, Fieldfare, Red grouse, Pine marten", nursery:{ name:"Trees Direct", url:"https://www.treesdirect.co.uk/products/rowan", note:"Native trees, bare root and pot grown" } },
-        { common_name:"Guelder Rose", latin_name:"Viburnum opulus", type:"shrub", reason:"Native to Scottish riparian edges and damp woodland, its heavy berry clusters persist well into winter providing food when other sources are depleted.", wildlife:"Bullfinch, Waxwing, Song thrush", nursery:{ name:"Celtic Wild Flowers", url:"https://celticwildflowers.co.uk", note:"Native plants for Scotland and Wales" } },
-        { common_name:"Devil's Bit Scabious", latin_name:"Succisa pratensis", type:"ground", reason:"The primary larval foodplant of the marsh fritillary butterfly, this is a key species for wet meadow habitats across central Scotland.", wildlife:"Marsh fritillary butterfly, Common carder bee, Garden bumblebee", nursery:{ name:"Habitat Aid", url:"https://www.habitataid.co.uk/collections/plug-plants", note:"Native wildflower plugs, UK grown" } },
-      ],
-      winter: [
-        { common_name:"Downy Birch", latin_name:"Betula pubescens", type:"tree", reason:"Better adapted to the wetter, cooler conditions of Scotland than silver birch, downy birch provides winter seed and bark habitat for specialist insects.", wildlife:"Redpoll, Siskin, Birch sawfly", nursery:{ name:"Trees Direct", url:"https://www.treesdirect.co.uk", note:"Native trees, bare root and pot grown" } },
-        { common_name:"Dog Rose", latin_name:"Rosa canina", type:"shrub", reason:"The persistent hips of dog rose provide a vital winter food source in Scottish hedgerows when temperatures drop and other berries have gone.", wildlife:"Fieldfare, Redwing, Long-tailed tit", nursery:{ name:"Hedgerow Rose", url:"https://www.hedgerowrose.co.uk", note:"Native roses and hedgerow shrubs" } },
-      ],
-      spring: [
-        { common_name:"Wood Anemone", latin_name:"Anemone nemorosa", type:"ground", reason:"An ancient woodland indicator species widespread across Scottish oakwood, wood anemone spreads slowly but reliably and signals genuine ecological restoration.", wildlife:"Buff-tailed bumblebee, Peacock butterfly, Wood mouse", nursery:{ name:"British Wildflower Plants", url:"https://www.wildflowerplants.com", note:"Native woodland floor species" } },
-        { common_name:"Crab Apple", latin_name:"Malus sylvestris", type:"tree", reason:"Native to Scottish woodland edges, crab apple blossom provides abundant spring nectar and the fruit persists into deep winter — particularly valuable in upland areas.", wildlife:"Brambling, Hawfinch, Common dormouse", nursery:{ name:"Trees Direct", url:"https://www.treesdirect.co.uk", note:"Native trees, bare root and pot grown" } },
-        { common_name:"Marsh Marigold", latin_name:"Caltha palustris", type:"ground", reason:"For wetter garden areas or pond margins, marsh marigold is a spectacular native Scottish wetland plant that flowers early when few other nectar sources exist.", wildlife:"Marsh fly, Early mining bee, Mallard", nursery:null },
-      ],
-      summer: [
-        { common_name:"Meadow Cranesbill", latin_name:"Geranium pratense", type:"ground", reason:"Native to Scottish roadsides and meadows, this robust perennial produces striking blue flowers from June to August and tolerates a range of soil types.", wildlife:"Common blue butterfly, Garden bumblebee, White-tailed bumblebee", nursery:{ name:"Naturescape", url:"https://www.naturescape.co.uk/product-category/wildflower-plants", note:"Native wildflower plants and seeds" } },
-        { common_name:"Tufted Vetch", latin_name:"Vicia cracca", type:"climber", reason:"A vigorous native climber found scrambling through Scottish hedgerows, tufted vetch fixes nitrogen and provides dense cover and nectar through midsummer.", wildlife:"Common blue butterfly, Bumblebees, Whitethroat", nursery:{ name:"Chiltern Seeds", url:"https://www.chilternseeds.co.uk", note:"Native wildflower seeds, UK supplier" } },
-        { common_name:"Ragged Robin", latin_name:"Lychnis flos-cuculi", type:"ground", reason:"A classic Scottish damp meadow plant, ragged robin thrives in wetter garden conditions and its distinctive pink flowers attract long-tongued bumblebees through July.", wildlife:"Garden bumblebee, Bee fly, Cuckoo bumblebee", nursery:{ name:"Habitat Aid", url:"https://www.habitataid.co.uk/collections/plug-plants", note:"Native wildflower plugs, UK grown" } },
-      ],
-    }
-  },
-  european: {
-    location_description: "Central European gardens sit at the intersection of Atlantic and Continental climate influences, supporting a diverse range of native woodland edge, meadow, and hedgerow species.",
-    seasons: {
-      autumn: [
-        { common_name:"Wild Cherry", latin_name:"Prunus avium", type:"tree", reason:"Native across central Europe, wild cherry provides spectacular autumn colour, abundant blossom in spring, and cherries that support over 30 species of moth and butterfly larvae.", wildlife:"Hawfinch, Common blackbird, Purple hairstreak butterfly", nursery:{ name:"Trees Direct", url:"https://www.treesdirect.co.uk", note:"Ships to most of Europe" } },
-        { common_name:"Elder", latin_name:"Sambucus nigra", type:"shrub", reason:"One of the most wildlife-productive native shrubs in central Europe, elder berries in autumn are eaten by over 30 species of bird and its flowers support hundreds of insect species.", wildlife:"Blackcap, Garden warbler, Elder moth", nursery:{ name:"Chiltern Seeds", url:"https://www.chilternseeds.co.uk", note:"Native wildflower seeds, ships to Europe" } },
-        { common_name:"Autumn Gentian", latin_name:"Gentianella amarella", type:"ground", reason:"A native of calcareous grassland across central Europe, autumn gentian provides late-season nectar when most other flowers have finished.", wildlife:"Clouded yellow butterfly, Small copper butterfly, Bumble bees", nursery:null },
-      ],
-      winter: [
-        { common_name:"Yew", latin_name:"Taxus baccata", type:"tree", reason:"A long-lived native of European limestone country, yew berries are critical winter food for thrushes and waxwings, and its dense evergreen structure provides year-round shelter.", wildlife:"Mistle thrush, Waxwing, Gold crest", nursery:{ name:"Trees Direct", url:"https://www.treesdirect.co.uk", note:"Native trees, ships to most of Europe" } },
-        { common_name:"Wayfaring Tree", latin_name:"Viburnum lantana", type:"shrub", reason:"Native to the limestone country of central Europe, wayfaring tree berries persist well into winter providing food for birds when other sources have gone.", wildlife:"Blackbird, Song thrush, Bullfinch", nursery:{ name:"Hedgerow Rose", url:"https://www.hedgerowrose.co.uk", note:"Native hedgerow shrubs" } },
-      ],
-      spring: [
-        { common_name:"Wild Garlic", latin_name:"Allium ursinum", type:"ground", reason:"A native of damp central European woodland, wild garlic carpets the ground in spring and provides nectar before the woodland canopy closes over.", wildlife:"Brimstone butterfly, Early bumblebee, Wood pigeon", nursery:{ name:"British Wildflower Plants", url:"https://www.wildflowerplants.com", note:"Native bulbs and woodland plants" } },
-        { common_name:"Hawthorn", latin_name:"Crataegus monogyna", type:"shrub", reason:"The most wildlife-valuable native hedgerow shrub in Europe — its blossom supports over 150 insect species and its berries feed birds through autumn and winter.", wildlife:"Song thrush, Redwing, Brown hairstreak butterfly", nursery:{ name:"Hedgerow Rose", url:"https://www.hedgerowrose.co.uk", note:"Native hedgerow shrubs" } },
-        { common_name:"Lesser Celandine", latin_name:"Ficaria verna", type:"ground", reason:"One of the earliest native European spring flowers, providing a critical nectar source for queen bumblebees and early butterflies in March.", wildlife:"Early bumblebee, Small tortoiseshell butterfly, Pipistrelle bat", nursery:{ name:"Habitat Aid", url:"https://www.habitataid.co.uk/collections/plug-plants", note:"Native wildflower plugs" } },
-      ],
-      summer: [
-        { common_name:"Meadow Clary", latin_name:"Salvia pratensis", type:"ground", reason:"A native of dry European meadows, meadow clary produces tall spikes of vivid blue flowers through June and July, highly attractive to specialist bumblebee species.", wildlife:"Shrill carder bee, Great yellow bumblebee, Painted lady butterfly", nursery:{ name:"Naturescape", url:"https://www.naturescape.co.uk/product-category/wildflower-plants", note:"Native wildflower plants and seeds" } },
-        { common_name:"Traveller's Joy", latin_name:"Clematis vitalba", type:"climber", reason:"The only native clematis in central Europe, traveller's joy provides dense summer cover for nesting birds and its fluffy seed heads persist through winter.", wildlife:"Whitethroat, Blackcap, Small emerald moth", nursery:{ name:"British Wildflower Plants", url:"https://www.wildflowerplants.com", note:"Native climbing plants" } },
-        { common_name:"Field Scabious", latin_name:"Knautia arvensis", type:"ground", reason:"A native of dry European grassland, field scabious flowers from June to October providing a long season of nectar for specialist butterflies and bumblebees.", wildlife:"Marsh fritillary butterfly, Brown argus butterfly, Shrill carder bee", nursery:{ name:"Chiltern Seeds", url:"https://www.chilternseeds.co.uk", note:"Native wildflower seeds, ships to Europe" } },
-      ],
-    }
-  }
-};
 
-function getMockPlan(postcode) {
-  const pc = postcode.toUpperCase().replace(/\s/g, '');
-  // Northern UK postcodes
-  const northern = ['EH','G','KY','PH','FK','DD','AB','IV','KW','HS','ZE','TD','DG','ML','KA','PA','DG'];
-  const prefix   = pc.match(/^[A-Z]+/)?.[0] || '';
-  if (northern.includes(prefix)) return MOCK_PLANS.northern_uk;
-  // UK postcodes (anything with recognisable UK prefix)
-  const ukPrefixes = ['BN','RH','TN','CT','ME','DA','SE','SW','W','NW','N','E','EC','WC','BR','CR','SM','KT','TW','UB','HA','WD','EN','IG','RM','SS','CM','CO','IP','NR','PE','NG','LE','CV','B','WS','WV','DY','ST','TF','SY','HR','GL','BS','BA','SP','SO','PO','GU','SL','RG','OX','HP','MK','LU','AL','SG','CB','NN','MK','TS','DH','SR','NE','CA','LA','PR','FY','BB','BL','OL','SK','CH','WA','WN','M','L','HU','YO','LS','BD','HX','HD','WF','DN','S','DE','LN','SR'];
-  if (ukPrefixes.includes(prefix)) return MOCK_PLANS.southern_uk;
-  return MOCK_PLANS.european;
-}
 // Acceptance criteria: postcode + size + garden type + goals →
 // seasonal plan with native plants, type badges, AI error handled,
 // retry available, form state preserved on back.
 
-const PLAN_MODEL   = 'claude-sonnet-4-6';
 const GARDEN_TYPES = ['Lawn','Patio / paved','Mixed borders','Overgrown / neglected','New build / bare soil','Woodland edge','Other'];
 const HABITAT_GOALS = [
   { id:'pollinators', label:'🐝 Pollinators' },
@@ -1863,86 +1775,32 @@ function saveFormState() {
   };
 }
 
-// ── SHARED: PLAN API CORE ────────────────────────────────────
-// Single source of truth for prompt construction and API call.
+// ── SHARED: PLAN CORE ────────────────────────────────────────
+// Fetches the pre-generated regional plan from plans.json.
+// No API key required. Live AI plans are a post-MVP feature.
 // Both the desktop drawer and mobile My Wild screen call this.
 //
-// Returns { plan, isMock } on success, throws on error.
-
-function buildPlanPrompt(formState) {
-  const { postcode, size, gardenType, goals } = formState;
-  const goalsText = goals.length > 0 ? goals.join(', ') : 'general biodiversity';
-  const sizeText  = size || 'medium sized';
-  const typeText  = gardenType || 'general garden';
-  return `You are an expert rewilding advisor. Create a personalised native planting plan for a homeowner.
-
-Location: ${postcode}
-Garden size: ${sizeText}
-Current garden type: ${typeText}
-Habitat goals: ${goalsText}
-
-Return ONLY a valid JSON object with this exact structure — no markdown, no explanation, just the JSON:
-{
-  "location_description": "brief plain-English description of the location's ecology (1 sentence)",
-  "seasons": {
-    "autumn": [
-      {
-        "common_name": "plant name",
-        "latin_name": "Latin name",
-        "type": "tree|shrub|ground|climber",
-        "reason": "why this plant suits this specific location and goals (1-2 sentences)",
-        "wildlife": "which specific wildlife it supports"
-      }
-    ],
-    "winter": [],
-    "spring": [],
-    "summer": []
-  }
-}
-
-Rules:
-- Each season must have exactly 2-3 plants
-- All plants must be native to the region indicated by the postcode
-- type must be exactly one of: tree, shrub, ground, climber
-- reason must be specific to the postcode region, not generic
-- wildlife must name specific species, not just "insects" or "birds"
-- Return only the JSON object, nothing else`;
-}
+// Returns { plan, isMock: true } on success, throws on error.
 
 async function callPlanAPI(formState) {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': window._apiKey || '',
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: PLAN_MODEL,
-      max_tokens: 1500,
-      messages: [{ role: 'user', content: buildPlanPrompt(formState) }]
-    })
-  });
+  const response = await fetch('plans.json');
+  if (!response.ok) throw new Error(`Could not load plans (${response.status})`);
+  const plans = await response.json();
+  return { plan: selectPlan(plans, formState.postcode), isMock: true };
+}
 
-  // 401 = no key in this environment — fall back to regional mock
-  if (response.status === 401) {
-    return { plan: getMockPlan(formState.postcode), isMock: true };
-  }
-
-  if (!response.ok) throw new Error(`API responded with status ${response.status}`);
-
-  const data    = await response.json();
-  const raw     = data.content?.[0]?.text || '';
-  const cleaned = raw.replace(/```json|```/g, '').trim();
-  const plan    = JSON.parse(cleaned);
-
-  if (!plan.seasons?.autumn || !plan.seasons?.winter ||
-      !plan.seasons?.spring || !plan.seasons?.summer) {
-    throw new Error('Plan structure incomplete');
-  }
-
-  return { plan, isMock: false };
+function selectPlan(plans, postcode) {
+  const pc     = (postcode || '').toUpperCase().replace(/\s/g, '');
+  const prefix = pc.match(/^[A-Z]+/)?.[0] || '';
+  const northern   = ['EH','G','KY','PH','FK','DD','AB','IV','KW','HS','ZE','TD','DG','ML','KA','PA'];
+  const ukPrefixes = ['BN','RH','TN','CT','ME','DA','SE','SW','W','NW','N','E','EC','WC','BR','CR',
+    'SM','KT','TW','UB','HA','WD','EN','IG','RM','SS','CM','CO','IP','NR','PE','NG','LE','CV','B',
+    'WS','WV','DY','ST','TF','SY','HR','GL','BS','BA','SP','SO','PO','GU','SL','RG','OX','HP','MK',
+    'LU','AL','SG','CB','NN','TS','DH','SR','NE','CA','LA','PR','FY','BB','BL','OL','SK','CH','WA',
+    'WN','M','L','HU','YO','LS','BD','HX','HD','WF','DN','S','DE','LN'];
+  if (northern.includes(prefix))   return plans.northern_uk;
+  if (ukPrefixes.includes(prefix)) return plans.southern_uk;
+  return plans.european;
 }
 
 // ── SHARED: PLAN HTML BUILDER ────────────────────────────────
@@ -1952,7 +1810,7 @@ async function callPlanAPI(formState) {
 function buildPlanHTML(plan, isMock, backFn) {
   const mockBanner = isMock ? `
     <div style="background:rgba(200,168,75,0.1);border:1px solid rgba(200,168,75,0.3);border-left:3px solid var(--gold);border-radius:0 4px 4px 0;padding:0.6rem 0.75rem;margin-bottom:1rem;font-size:0.75rem;color:var(--soil);line-height:1.5;">
-      <strong style="color:var(--gold);">Demo plan</strong> — This is a representative plan for your region. Live AI-generated plans will be available when the app is hosted.
+      <strong style="color:var(--gold);">Regional plan</strong> — This plan is based on native species suited to your area. Personalised AI-generated plans are coming in a future version.
     </div>` : '';
 
   const seasonsHtml = SEASONS.map(s => {
