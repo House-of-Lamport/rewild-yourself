@@ -1304,15 +1304,21 @@ function makeMarker(site) {
   m.baseColor    = cfg.color;
 
   m.bindPopup('', { maxWidth: 210, closeButton: false });
+
   m.on('click', () => {
     const isNearby = nearbyIds.has(site.id);
     m.setPopupContent(`
       <div class="lp-name">${esc(site.name)}</div>
       <div class="lp-meta">${esc(cfg.icon)} ${esc(cfg.label)} &nbsp;·&nbsp; ${esc(site.country)}</div>
       ${isNearby ? '<div class="lp-nearby">📍 Near your search</div>' : ''}
-      <button class="lp-open" onclick="openPanel(${site.id})">View details →</button>
+      <button class="lp-open">View details →</button>
     `);
     m.openPopup();
+  });
+
+  m.on('popupopen', () => {
+    const btn = m.getPopup()?.getElement()?.querySelector('.lp-open');
+    if (btn) btn.addEventListener('click', () => openPanel(site.id));
   });
 
   markers.push(m);
