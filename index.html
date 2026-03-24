@@ -1169,6 +1169,18 @@
 //   nominatim for Europe). Rate-limited; not for high traffic.
 // ═══════════════════════════════════════════════════════════
 
+// ── SHARED: HTML ESCAPE HELPER ──────────────────────────────
+// Use esc() around every data value interpolated into innerHTML.
+// Structural HTML we write ourselves does not need escaping.
+function esc(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // ── SHARED: SITE TYPE CONFIG ────────────────────────────────
 const TYPES = {
   woodland: { color: '#2d7a2d', label: 'Woodland',       icon: '🌳' },
@@ -1295,8 +1307,8 @@ function makeMarker(site) {
   m.on('click', () => {
     const isNearby = nearbyIds.has(site.id);
     m.setPopupContent(`
-      <div class="lp-name">${site.name}</div>
-      <div class="lp-meta">${cfg.icon} ${cfg.label} &nbsp;·&nbsp; ${site.country}</div>
+      <div class="lp-name">${esc(site.name)}</div>
+      <div class="lp-meta">${esc(cfg.icon)} ${esc(cfg.label)} &nbsp;·&nbsp; ${esc(site.country)}</div>
       ${isNearby ? '<div class="lp-nearby">📍 Near your search</div>' : ''}
       <button class="lp-open" onclick="openPanel(${site.id})">View details →</button>
     `);
@@ -1360,29 +1372,29 @@ function openPanel(id) {
     ? `${Math.round(site.size * 10000)} m²`
     : `${site.size.toLocaleString()} hectares`;
 
-  const speciesTags = site.species.map(s => `<span class="species-tag">${s}</span>`).join('');
+  const speciesTags = site.species.map(s => `<span class="species-tag">${esc(s)}</span>`).join('');
 
   const visitHtml = site.visiting
-    ? `<div class="visit-box"><strong>Visiting</strong>${site.visiting}</div>`
+    ? `<div class="visit-box"><strong>Visiting</strong>${esc(site.visiting)}</div>`
     : `<div class="visit-box no-visit"><strong>Visiting</strong>This site isn't currently listed for public visits. To find out more or arrange access, contact us and we'll connect you with the site owner.</div>`;
 
   document.getElementById('panelBody').innerHTML = `
     <div class="detail-row">
-      <span class="detail-icon">${cfg.icon}</span>
+      <span class="detail-icon">${esc(cfg.icon)}</span>
       <div>
         <div class="detail-label">Habitat type</div>
         <div class="detail-value">
-          <span class="type-badge" style="background:${cfg.color}18;color:${cfg.color};border:1px solid ${cfg.color}30;">${cfg.label}</span>
+          <span class="type-badge" style="background:${esc(cfg.color)}18;color:${esc(cfg.color)};border:1px solid ${esc(cfg.color)}30;">${esc(cfg.label)}</span>
         </div>
       </div>
     </div>
     <div class="detail-row">
       <span class="detail-icon">📐</span>
-      <div><div class="detail-label">Approximate size</div><div class="detail-value">${sizeLabel}</div></div>
+      <div><div class="detail-label">Approximate size</div><div class="detail-value">${esc(sizeLabel)}</div></div>
     </div>
     <div class="detail-row">
       <span class="detail-icon">📍</span>
-      <div><div class="detail-label">Location</div><div class="detail-value">${site.country}</div></div>
+      <div><div class="detail-label">Location</div><div class="detail-value">${esc(site.country)}</div></div>
     </div>
     <div class="divider"></div>
     <div class="detail-row">
@@ -1596,8 +1608,8 @@ function showCorridorPanel(nearby, ordered) {
   sites.innerHTML = ordered.map(s => {
     const cfg = TYPES[s.type] || TYPES.meadow;
     return `<div class="corridor-site-item">
-      <span class="corridor-dot" style="background:${cfg.color}"></span>
-      ${s.name}
+      <span class="corridor-dot" style="background:${esc(cfg.color)}"></span>
+      ${esc(s.name)}
     </div>`;
   }).join('');
 
@@ -1949,33 +1961,33 @@ function buildPlanHTML(plan, isMock, backFn) {
     const plantsHtml = plants.map(p => {
       const badgeCfg   = TYPE_BADGE[p.type] || { cls:'badge-other', label: p.type };
       const nurseryHtml = p.nursery
-        ? `<div class="plant-nursery">🛒 <a href="${p.nursery.url}" target="_blank" rel="noopener noreferrer">${p.nursery.name}</a> <span>${p.nursery.note}</span></div>`
+        ? `<div class="plant-nursery">🛒 <a href="${esc(p.nursery.url)}" target="_blank" rel="noopener noreferrer">${esc(p.nursery.name)}</a> <span>${esc(p.nursery.note)}</span></div>`
         : `<div class="plant-nursery no-nursery">🛒 <span>No supplier link available for this plant yet — check back soon.</span></div>`;
       return `
         <div class="plant-card">
           <div class="plant-card-top">
             <div>
-              <div class="plant-name">${p.common_name}</div>
-              <div class="plant-latin">${p.latin_name}</div>
+              <div class="plant-name">${esc(p.common_name)}</div>
+              <div class="plant-latin">${esc(p.latin_name)}</div>
             </div>
-            <span class="plant-type-badge ${badgeCfg.cls}">${badgeCfg.label}</span>
+            <span class="plant-type-badge ${esc(badgeCfg.cls)}">${esc(badgeCfg.label)}</span>
           </div>
-          <div class="plant-reason">${p.reason}</div>
-          <div class="plant-wildlife">🦋 <span>${p.wildlife}</span></div>
+          <div class="plant-reason">${esc(p.reason)}</div>
+          <div class="plant-wildlife">🦋 <span>${esc(p.wildlife)}</span></div>
           ${nurseryHtml}
         </div>`;
     }).join('');
     return `
       <div class="season-block">
-        <div class="season-title">${s.icon} ${s.label}</div>
+        <div class="season-title">${esc(s.icon)} ${esc(s.label)}</div>
         ${plantsHtml}
       </div>`;
   }).join('');
 
   return `
-    <button class="back-btn" onclick="${backFn}()">← Edit my details</button>
+    <button class="back-btn" onclick="${esc(backFn)}()">← Edit my details</button>
     ${mockBanner}
-    <div class="plan-intro">${plan.location_description}</div>
+    <div class="plan-intro">${esc(plan.location_description)}</div>
     ${seasonsHtml}
   `;
 }
