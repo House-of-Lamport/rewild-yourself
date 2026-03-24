@@ -1314,9 +1314,7 @@ function makeMarker(site) {
       <button class="lp-open">View details →</button>
     `);
     m.openPopup();
-  });
-
-  m.on('popupopen', () => {
+    // Attach after openPopup so the DOM is present
     const btn = m.getPopup()?.getElement()?.querySelector('.lp-open');
     if (btn) btn.addEventListener('click', () => openPanel(site.id));
   });
