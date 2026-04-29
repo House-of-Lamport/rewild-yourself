@@ -617,6 +617,19 @@
   .visit-box strong { color: var(--moss); display: block; margin-bottom: 0.25rem; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; }
   .divider { height: 1px; background: rgba(107,79,53,0.12); margin: 1rem 0; }
 
+  /* ── ECOLOGICAL DESIGNATION BADGES ───────────────────── */
+  .desig-section { margin-top: 0.25rem; margin-bottom: 0.25rem; }
+  .desig-label { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--soil); margin-bottom: 0.5rem; }
+  .desig-badges { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .desig-badge { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.7rem; font-weight: 700; text-decoration: none; transition: opacity 0.15s; border: 1px solid; }
+  .desig-badge:hover { opacity: 0.8; }
+  .desig-badge.b_line   { background: rgba(200,143,32,0.12);  color: #a07010; border-color: rgba(200,143,32,0.3); }
+  .desig-badge.iia      { background: rgba(61,107,61,0.12);   color: var(--fern); border-color: rgba(61,107,61,0.3); }
+  .desig-badge.spa      { background: rgba(42,98,142,0.12);   color: #2a628e; border-color: rgba(42,98,142,0.3); }
+  .desig-badge.sac      { background: rgba(44,115,107,0.12);  color: #2c736b; border-color: rgba(44,115,107,0.3); }
+  .desig-badge.ramsar   { background: rgba(80,112,150,0.12);  color: #507096; border-color: rgba(80,112,150,0.3); }
+  .desig-attribution { font-size: 0.62rem; color: var(--soil); opacity: 0.7; margin-top: 0.5rem; }
+
   /* ── NEARBY HIGHLIGHT RING ────────────────────────────── */
   /* applied via JS to nearby markers */
 
@@ -1317,6 +1330,33 @@ map.on('zoomend', updateCount);
 // ── STORY 1: DETAIL PANEL ───────────────────────────────────
 let currentSiteId = null;
 
+// ── DESIGNATION BADGES ──────────────────────────────────────
+const DESIG_CONFIG = {
+  b_line:  { icon: '🐝', label: 'B-Line Zone',                    url: 'https://www.buglife.org.uk/our-work/b-lines/' },
+  iia:     { icon: '🦋', label: 'Important Invertebrate Area',    url: 'https://www.buglife.org.uk/our-work/iias/' },
+  spa:     { icon: '🐦', label: 'Special Protection Area',        url: 'https://jncc.gov.uk/our-work/special-protection-areas-overview/' },
+  sac:     { icon: '🌿', label: 'Special Area of Conservation',   url: 'https://jncc.gov.uk/our-work/special-areas-of-conservation-overview/' },
+  ramsar:  { icon: '💧', label: 'Ramsar Wetland',                 url: 'https://jncc.gov.uk/our-work/ramsar-sites-overview/' },
+};
+
+function buildDesignationBadges(designations) {
+  if (!designations || designations.length === 0) return '';
+  const badges = designations.map(d => {
+    const cfg = DESIG_CONFIG[d.type];
+    if (!cfg) return '';
+    const name = d.type === 'b_line' ? cfg.label : esc(d.label);
+    return `<a class="desig-badge ${esc(d.type)}" href="${esc(cfg.url)}" target="_blank" rel="noopener noreferrer" title="${esc(d.label)}">${cfg.icon} ${name}</a>`;
+  }).join('');
+  const sources = [...new Set(designations.map(d => d.source))].join(' / ');
+  return `
+    <div class="desig-section">
+      <div class="desig-label">Ecological designations</div>
+      <div class="desig-badges">${badges}</div>
+      <div class="desig-attribution">Data: ${esc(sources)} · Open Government Licence</div>
+    </div>
+    <div class="divider"></div>`;
+}
+
 function openPanel(id) {
   const site = SITES.find(s => s.id === id);
   if (!site) return;
@@ -1355,6 +1395,7 @@ function openPanel(id) {
       <div><div class="detail-label">Location</div><div class="detail-value">${esc(site.country)}</div></div>
     </div>
     <div class="divider"></div>
+    ${buildDesignationBadges(site.ecological_designations)}
     <div class="detail-row">
       <span class="detail-icon">🦋</span>
       <div><div class="detail-label">Notable species</div><div class="species-tags">${speciesTags}</div></div>
