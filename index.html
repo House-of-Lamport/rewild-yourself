@@ -577,6 +577,13 @@
   .legend-dot { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.4); flex-shrink: 0; }
   .legend-line { width: 18px; height: 3px; border-radius: 2px; flex-shrink: 0; background: var(--corridor); opacity: 0.85; }
 
+  /* ── ZONE LAYER TOGGLES ────────────────────────────────── */
+  .legend-divider { border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 0.4rem 0; }
+  .legend-toggle { cursor: pointer; user-select: none; border-radius: 3px; padding: 0.1rem 0.2rem; transition: opacity 0.15s; }
+  .legend-toggle:hover { opacity: 0.75; }
+  .legend-toggle.off { opacity: 0.4; }
+  .legend-swatch { width: 18px; height: 10px; border-radius: 2px; flex-shrink: 0; border: 2px solid; }
+
   /* ── DETAIL PANEL ─────────────────────────────────────── */
   .detail-panel {
     width: 340px;
@@ -629,6 +636,18 @@
   .desig-badge.sac      { background: rgba(44,115,107,0.12);  color: #2c736b; border-color: rgba(44,115,107,0.3); }
   .desig-badge.ramsar   { background: rgba(80,112,150,0.12);  color: #507096; border-color: rgba(80,112,150,0.3); }
   .desig-attribution { font-size: 0.62rem; color: var(--soil); opacity: 0.7; margin-top: 0.5rem; }
+
+  /* ── ZONE TOOLTIPS ─────────────────────────────────────── */
+  .zone-tooltip {
+    background: rgba(30,50,30,0.9);
+    border: none;
+    border-radius: 4px;
+    color: #d4e8c2;
+    font-size: 0.72rem;
+    padding: 0.2rem 0.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+  .zone-tooltip::before { display: none; }
 
   /* ── NEARBY HIGHLIGHT RING ────────────────────────────── */
   /* applied via JS to nearby markers */
@@ -1061,6 +1080,17 @@
       <div class="legend-item"><span class="legend-dot" style="background:#7a5f9e"></span>Garden</div>
       <div class="legend-item"><span class="legend-dot" style="background:#b54b4b"></span>Reserve</div>
       <div class="legend-item" id="legendCorridor" style="display:none"><span class="legend-line"></span>Corridor</div>
+      <hr class="legend-divider">
+      <div class="legend-title">Ecological zones</div>
+      <div class="legend-item legend-toggle" id="toggleRamsar" onclick="toggleZoneLayer('ramsar')" title="Toggle Ramsar Wetland zones">
+        <span class="legend-swatch" style="background:rgba(80,112,150,0.15);border-color:#507096"></span>💧 Ramsar
+      </div>
+      <div class="legend-item legend-toggle" id="toggleSpa" onclick="toggleZoneLayer('spa')" title="Toggle Special Protection Areas">
+        <span class="legend-swatch" style="background:rgba(42,98,142,0.15);border-color:#2a628e"></span>🦅 SPA
+      </div>
+      <div class="legend-item legend-toggle" id="toggleSac" onclick="toggleZoneLayer('sac')" title="Toggle Special Areas of Conservation">
+        <span class="legend-swatch" style="background:rgba(44,115,107,0.15);border-color:#2c736b"></span>🌿 SAC
+      </div>
     </div>
 
     <!-- DETAIL PANEL -->
@@ -1664,7 +1694,86 @@ function clearSearch() {
   closePanel();
 }
 
-// ── STORY 3: MOCK PLANS (used when API key unavailable) ──────
+// ── ZONE LAYERS (Session C) ──────────────────────────────────
+// Each zone layer loads its GeoJSON lazily on first toggle.
+// State: null = not loaded, false = loaded+hidden, L.GeoJSON = loaded+shown.
+
+const ZONE_LAYERS = {
+  ramsar: {
+    file:        'zones_ramsar.geojson',
+    color:       '#507096',
+    fillOpacity: 0.12,
+    label:       'Ramsar Wetland',
+    layer:       null,   // null=not fetched, false=hidden, GeoJSON layer=visible
+    loaded:      false,
+  },
+  spa: {
+    file:        'zones_spa.geojson',
+    color:       '#2a628e',
+    fillOpacity: 0.12,
+    label:       'Special Protection Area',
+    layer:       null,
+    loaded:      false,
+  },
+  sac: {
+    file:        'zones_sac.geojson',
+    color:       '#2c736b',
+    fillOpacity: 0.1,
+    label:       'Special Area of Conservation',
+    layer:       null,
+    loaded:      false,
+  },
+};
+
+function toggleZoneLayer(key) {
+  const cfg    = ZONE_LAYERS[key];
+  const toggle = document.getElementById('toggle' + key.charAt(0).toUpperCase() + key.slice(1));
+
+  // If not yet loaded, fetch and add
+  if (!cfg.loaded) {
+    toggle.textContent = toggle.textContent; // keep label
+    toggle.style.opacity = '0.6';
+
+    fetch(cfg.file)
+      .then(r => {
+        if (!r.ok) throw new Error(`${cfg.file} not found (${r.status})`);
+        return r.json();
+      })
+      .then(data => {
+        cfg.layer = L.geoJSON(data, {
+          style: {
+            color:       cfg.color,
+            weight:      1.5,
+            opacity:     0.7,
+            fillColor:   cfg.color,
+            fillOpacity: cfg.fillOpacity,
+          },
+          onEachFeature(feature, layer) {
+            const name = feature.properties && (feature.properties.name || feature.properties.SITE_NAME || feature.properties.SPA_NAME || feature.properties.SAC_NAME || cfg.label);
+            if (name) layer.bindTooltip(name, { sticky: true, className: 'zone-tooltip' });
+          },
+        }).addTo(map);
+        cfg.loaded = true;
+        toggle.classList.remove('off');
+        toggle.style.opacity = '';
+      })
+      .catch(err => {
+        console.warn(`Zone layer '${key}' not available:`, err.message);
+        toggle.style.opacity = '';
+        toggle.title = `${cfg.label} — file not yet committed to repo`;
+      });
+    return;
+  }
+
+  // Already loaded — toggle visibility
+  if (map.hasLayer(cfg.layer)) {
+    map.removeLayer(cfg.layer);
+    toggle.classList.add('off');
+  } else {
+    map.addLayer(cfg.layer);
+    toggle.classList.remove('off');
+  }
+} (used when API key unavailable) ──────
 
 // Acceptance criteria: postcode + size + garden type + goals →
 // seasonal plan with native plants, type badges, AI error handled,
