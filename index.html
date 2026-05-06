@@ -496,6 +496,33 @@
     padding-top: 0.65rem;
     border-top: 1px solid rgba(181,201,168,0.15);
   }
+  .corridor-detail-panel {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    width: 300px;
+    background: rgba(30,50,30,0.97);
+    border: 1px solid rgba(240,165,0,0.3);
+    border-radius: 8px;
+    padding: 1rem;
+    z-index: 600;
+    display: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    backdrop-filter: blur(6px);
+  }
+  .corridor-detail-panel.show { display: block; }
+  .cdp-close { float: right; background: none; border: none; color: var(--lichen); font-size: 1.1rem; cursor: pointer; opacity: 0.7; margin: -0.2rem -0.2rem 0 0; }
+  .cdp-close:hover { opacity: 1; }
+  .cdp-habitat { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--corridor); margin-bottom: 0.4rem; }
+  .cdp-sites { font-size: 0.78rem; color: var(--lichen); margin-bottom: 0.75rem; line-height: 1.4; }
+  .cdp-sites strong { color: #fff; }
+  .cdp-section-label { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--soil); margin-bottom: 0.35rem; }
+  .cdp-species { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.75rem; }
+  .cdp-species-tag { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 0.15rem 0.5rem; font-size: 0.68rem; color: var(--lichen); }
+  .cdp-description { font-size: 0.75rem; color: var(--lichen); line-height: 1.5; margin-bottom: 0.75rem; opacity: 0.85; }
+  .cdp-cta { display: block; text-align: center; background: rgba(240,165,0,0.15); border: 1px solid rgba(240,165,0,0.3); border-radius: 6px; color: var(--corridor); font-size: 0.72rem; font-weight: 700; padding: 0.4rem 0.75rem; text-decoration: none; cursor: pointer; transition: background 0.15s; }
+  .cdp-cta:hover { background: rgba(240,165,0,0.25); }
+
   .corridor-site-item {
     font-size: 0.73rem;
     color: rgba(181,201,168,0.75);
@@ -1071,6 +1098,17 @@
       <div class="corridor-sites" id="corridorSites"></div>
     </div>
 
+    <!-- CORRIDOR DETAIL PANEL (shown on line click) -->
+    <div class="corridor-detail-panel" id="corridorDetailPanel">
+      <button class="cdp-close" onclick="closeCorridorDetail()" aria-label="Close">×</button>
+      <div class="cdp-habitat" id="cdpHabitat"></div>
+      <div class="cdp-sites" id="cdpSites"></div>
+      <div class="cdp-section-label">Likely species</div>
+      <div class="cdp-species" id="cdpSpecies"></div>
+      <div class="cdp-description" id="cdpDescription"></div>
+      <div class="cdp-cta" onclick="scrollToMyWild()">🌱 Extend this corridor from your garden</div>
+    </div>
+
     <!-- LEGEND -->
     <div class="map-legend">
       <div class="legend-title">Habitat type</div>
@@ -1612,12 +1650,20 @@ async function runSearch() {
     for (let i = 0; i < ordered.length - 1; i++) {
       const a = ordered[i];
       const b = ordered[i + 1];
+      const corridorMeta = buildCorridorMeta(a, b);
       const line = L.polyline([[a.lat, a.lng],[b.lat, b.lng]], {
         color:     '#f0a500',
         weight:    2.5,
         opacity:   0.65,
         dashArray: '6 6',
       }).addTo(map);
+      line.corridorMeta = corridorMeta;
+      line.on('click', function(e) {
+        L.DomEvent.stopPropagation(e);
+        openCorridorDetail(this.corridorMeta);
+      });
+      line.on('mouseover', function() { this.setStyle({ weight: 4, opacity: 0.9 }); });
+      line.on('mouseout',  function() { this.setStyle({ weight: 2.5, opacity: 0.65 }); });
       corridorLines.push(line);
     }
     showCorridorPanel(nearby, ordered);
@@ -1694,7 +1740,120 @@ function clearSearch() {
   closePanel();
 }
 
-// ── ZONE LAYERS (Session C) ──────────────────────────────────
+// ── CORRIDOR DETAIL (Session D) ─────────────────────────────
+// Static habitat lookup keyed to site type pairs.
+// Each entry: { label, species[], description, icon }
+
+const HABITAT_DATA = {
+  'woodland|woodland': {
+    icon: '🌳',
+    label: 'Woodland corridor',
+    species: ['Dormouse','Jay','Wood warbler','Purple hairstreak','Tawny owl','Fox','Roe deer'],
+    description: 'A woodland-to-woodland corridor provides continuous canopy cover — the preferred travel route for mammals and canopy-dwelling insects. Look for signs of fox paths and fallen deadwood supporting beetle communities.',
+  },
+  'wetland|wetland': {
+    icon: '💧',
+    label: 'Wetland corridor',
+    species: ['Otter','Kingfisher','Reed warbler','Common frog','Dragonfly','Water vole','Grey heron'],
+    description: 'Wetland corridors follow watercourses and damp margins. Even a narrow strip of marshy ground can allow otters and water voles to move between larger wetland sites. Listen for reed warblers in summer.',
+  },
+  'meadow|meadow': {
+    icon: '🌸',
+    label: 'Grassland corridor',
+    species: ['Bumblebee','Meadow brown','Skylark','Brown hare','Common lizard','Yellowhammer','Field vole'],
+    description: 'Grassland corridors — road verges, field margins, chalk downland strips — are the lifeline of the UK\'s pollinator network. A connected grassland corridor in July can support dozens of bumblebee species.',
+  },
+  'woodland|wetland': {
+    icon: '🌿',
+    label: 'Woodland–wetland transition',
+    species: ['Otter','Woodcock','Alder fly','Brown trout','Willow tit','Marsh tit','Common toad'],
+    description: 'Where woodland meets wetland, you get one of the richest ecological edges in the UK. Alders and willows bridge both habitats. Woodcock probe the damp ground at dusk; otters use the woodland bank for holts.',
+  },
+  'woodland|meadow': {
+    icon: '🦋',
+    label: 'Woodland–grassland transition',
+    species: ['Fritillary butterfly','Nightingale','Common shrew','Grass snake','Slow worm','Green woodpecker','Badger'],
+    description: 'The woodland edge is one of Britain\'s most biodiverse habitats. Fritillary butterflies need both woodland rides and open grassland. Green woodpeckers hunt ants in adjacent meadows. Badger setts often sit right on this boundary.',
+  },
+  'wetland|meadow': {
+    icon: '🦆',
+    label: 'Wetland–grassland transition',
+    species: ['Lapwing','Snipe','Marsh harrier','Common blue butterfly','Grass snake','Yellow wagtail','Curlew'],
+    description: 'Wet grassland is one of the UK\'s rarest and most threatened habitats. This corridor type supports wading birds that feed in the damp margins and nest in the taller grass. Curlew numbers have collapsed — corridors like this are critical.',
+  },
+  'reserve|woodland': {
+    icon: '🌳',
+    label: 'Reserve–woodland corridor',
+    species: ['Dormouse','Polecat','Spotted flycatcher','White admiral','Nuthatch','Treecreeper','Pine marten'],
+    description: 'Nature reserves anchored by woodland are the nodes that hold the wider network together. This corridor extends the reserve\'s influence into the surrounding landscape, allowing wide-ranging species like polecat and pine marten to disperse.',
+  },
+  'reserve|wetland': {
+    icon: '💧',
+    label: 'Reserve–wetland corridor',
+    species: ['Bittern','Marsh harrier','Great crested newt','Otter','Shoveler duck','Reed bunting','Water rail'],
+    description: 'Wetland reserves depend on connected water systems. This corridor likely follows a river, stream or drainage ditch — the route taken by otters and water voles moving between the larger wetland reserve and surrounding habitat.',
+  },
+  'reserve|meadow': {
+    icon: '🌸',
+    label: 'Reserve–grassland corridor',
+    species: ['Bumblebee','Adder','Stone curlew','Brown hare','Chalkhill blue','Skylark','Barn owl'],
+    description: 'Grassland reserves are islands in a sea of intensive farmland. This corridor — likely a road verge, field margin or chalk track — is the bridge that allows grassland specialists to colonise and maintain genetic diversity.',
+  },
+};
+
+function getHabitatKey(typeA, typeB) {
+  // Normalise: always put types in consistent order so woodland|wetland === wetland|woodland
+  const order = ['woodland','wetland','meadow','reserve','garden'];
+  const a = order.includes(typeA) ? typeA : 'reserve';
+  const b = order.includes(typeB) ? typeB : 'reserve';
+  const key1 = `${a}|${b}`;
+  const key2 = `${b}|${a}`;
+  return HABITAT_DATA[key1] ? key1 : (HABITAT_DATA[key2] ? key2 : `${a}|${b}`);
+}
+
+function buildCorridorMeta(siteA, siteB) {
+  const key  = getHabitatKey(siteA.type, siteB.type);
+  const data = HABITAT_DATA[key] || {
+    icon:        '🐾',
+    label:       'Mixed habitat corridor',
+    species:     ['Fox','Bumblebee','Common pipistrelle','Hedgehog','Wren','Robin','Wood mouse'],
+    description: 'This corridor connects two rewilded sites across a varied landscape. Even a thin strip of native planting along this route would allow small mammals and invertebrates to move safely between the two.',
+  };
+  return {
+    siteA,
+    siteB,
+    ...data,
+    distKm: Math.round(distKm(siteA.lat, siteA.lng, siteB.lat, siteB.lng)),
+  };
+}
+
+function openCorridorDetail(meta) {
+  document.getElementById('cdpHabitat').innerHTML =
+    `${meta.icon} ${esc(meta.label)} &nbsp;·&nbsp; ${meta.distKm} km`;
+
+  document.getElementById('cdpSites').innerHTML =
+    `Connecting <strong>${esc(meta.siteA.name)}</strong> and <strong>${esc(meta.siteB.name)}</strong>`;
+
+  document.getElementById('cdpSpecies').innerHTML =
+    meta.species.map(s => `<span class="cdp-species-tag">${esc(s)}</span>`).join('');
+
+  document.getElementById('cdpDescription').textContent = meta.description;
+
+  document.getElementById('corridorDetailPanel').classList.add('show');
+}
+
+function closeCorridorDetail() {
+  document.getElementById('corridorDetailPanel').classList.remove('show');
+}
+
+function scrollToMyWild() {
+  closeCorridorDetail();
+  // Scroll to the My Wild / planting plan section
+  const el = document.getElementById('myWildSection') || document.querySelector('.mywild-section');
+  if (el) el.scrollIntoView({ behavior: 'smooth' });
+}
+
+map.on('click', () => closeCorridorDetail());
 // Each zone layer loads its GeoJSON lazily on first toggle.
 // State: null = not loaded, false = loaded+hidden, L.GeoJSON = loaded+shown.
 
