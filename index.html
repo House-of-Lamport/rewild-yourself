@@ -1136,6 +1136,9 @@
       <div class="legend-item" id="legendCorridor" style="display:none"><span class="legend-line"></span>Corridor</div>
       <hr class="legend-divider">
       <div class="legend-title">Ecological zones</div>
+      <div class="legend-item legend-toggle" id="toggleBlines" onclick="toggleZoneLayer('blines')" title="Toggle Buglife B-Lines — pollinator corridors">
+        <span class="legend-swatch" style="background:rgba(240,165,0,0.1);border-color:#f0a500"></span>🐝 B-Lines
+      </div>
       <div class="legend-item legend-toggle" id="toggleRamsar" onclick="toggleZoneLayer('ramsar')" title="Toggle Ramsar Wetland zones">
         <span class="legend-swatch" style="background:rgba(80,112,150,0.15);border-color:#507096"></span>💧 Ramsar
       </div>
@@ -1912,6 +1915,14 @@ map.on('click', () => closeCorridorDetail());
 // State: null = not loaded, false = loaded+hidden, L.GeoJSON = loaded+shown.
 
 const ZONE_LAYERS = {
+  blines: {
+    file:        'zones_blines.geojson',
+    color:       '#f0a500',
+    fillOpacity: 0.06,
+    label:       'Buglife B-Line',
+    layer:       null,
+    loaded:      false,
+  },
   ramsar: {
     file:        'zones_ramsar.geojson',
     color:       '#507096',
