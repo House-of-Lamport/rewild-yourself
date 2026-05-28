@@ -1148,7 +1148,7 @@
       <div class="legend-item legend-toggle" id="toggleSpa" onclick="toggleZoneLayer('spa')" title="Toggle Special Protection Areas">
         <span class="legend-swatch" style="background:rgba(42,98,142,0.15);border-color:#2a628e"></span>🦅 SPA
       </div>
-      <div class="legend-item legend-toggle" id="toggleSac" onclick="toggleZoneLayer('sac')" title="Toggle Special Areas of Conservation">
+      <div class="legend-item legend-toggle" id="toggleSac" onclick="toggleZoneLayer('sac')" title="Toggle Special Areas of Conservation" style="display:none">
         <span class="legend-swatch" style="background:rgba(44,115,107,0.15);border-color:#2c736b"></span>🌿 SAC
       </div>
     </div>
@@ -1939,7 +1939,7 @@ const ZONE_LAYERS = {
     color:       '#507096',
     fillOpacity: 0.12,
     label:       'Ramsar Wetland',
-    layer:       null,   // null=not fetched, false=hidden, GeoJSON layer=visible
+    layer:       null,
     loaded:      false,
   },
   spa: {
