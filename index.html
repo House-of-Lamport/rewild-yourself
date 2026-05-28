@@ -1139,6 +1139,9 @@
       <div class="legend-item legend-toggle" id="toggleBlines" onclick="toggleZoneLayer('blines')" title="Toggle Buglife B-Lines — pollinator corridors">
         <span class="legend-swatch" style="background:rgba(240,165,0,0.1);border-color:#f0a500"></span>🐝 B-Lines
       </div>
+      <div class="legend-item legend-toggle" id="toggleIia" onclick="toggleZoneLayer('iia')" title="Toggle Important Invertebrate Areas">
+        <span class="legend-swatch" style="background:rgba(123,45,139,0.1);border-color:#7b2d8b"></span>🦋 IIAs
+      </div>
       <div class="legend-item legend-toggle" id="toggleRamsar" onclick="toggleZoneLayer('ramsar')" title="Toggle Ramsar Wetland zones">
         <span class="legend-swatch" style="background:rgba(80,112,150,0.15);border-color:#507096"></span>💧 Ramsar
       </div>
@@ -1920,6 +1923,14 @@ const ZONE_LAYERS = {
     color:       '#f0a500',
     fillOpacity: 0.06,
     label:       'Buglife B-Line',
+    layer:       null,
+    loaded:      false,
+  },
+  iia: {
+    file:        'zones_iia.geojson',
+    color:       '#7b2d8b',
+    fillOpacity: 0.08,
+    label:       'Important Invertebrate Area',
     layer:       null,
     loaded:      false,
   },
