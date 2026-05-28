@@ -1966,7 +1966,6 @@ function toggleZoneLayer(key) {
 
   // If not yet loaded, fetch and add
   if (!cfg.loaded) {
-    toggle.textContent = toggle.textContent; // keep label
     toggle.style.opacity = '0.6';
 
     fetch(cfg.file)
